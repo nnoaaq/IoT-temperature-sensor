@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "author": "Noa Julkunen",
+  "editor": "wokwi",
+  "parts": [
+    {
+      "type": "board-esp32-devkit-c-v4",
+      "id": "esp",
+      "top": -288,
+      "left": 177.64,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-dht22",
+      "id": "dht1",
+      "top": -287.7,
+      "left": 61.8,
+      "attrs": {}
+    }
+  ],
+  "connections": [
+    ["esp:TX", "$serialMonitor:RX", "", []],
+    ["esp:RX", "$serialMonitor:TX", "", []],
+    ["dht1:VCC", "esp:5V", "red", ["v0"]],
+    ["dht1:SDA", "esp:14", "green", ["v0"]],
+    ["dht1:GND", "esp:GND.1", "black", ["v0"]]
+  ],
+  "dependencies": {}
+}
