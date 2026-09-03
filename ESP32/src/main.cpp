@@ -1,7 +1,16 @@
-#include "secrets.h"
 #include <Arduino.h>
 #include <WiFi.h>
 #include <time.h>
+#include "secrets.h"
+#include <DHTesp.h>
+#include <HTTPClient.h>
+#define DHT_PIN 14
+#define DHT_TYPE DHT22
+
+HTTPClient http;
+DHTesp dht;
+// Viimeinen mittaus-muuttuja
+TempAndHumidity latestMeasuredData = {-999.0, -999.0};
 
 void setup()
 {
@@ -20,20 +29,54 @@ void setup()
   // Synkronoidaan kello
   configTzTime("EET-2EEST,M3.5.0/3,M10.5.0/4", NTP_SERVER);
   struct tm timeinfo;
-  Serial.println("Synkronoidaan kelloa");
+  Serial.println("\nSynkronoidaan kelloa");
   while (!getLocalTime(&timeinfo))
   {
     Serial.print(".");
-    delay(10);
   }
-  time_t now;
-  time(&now);
+  time_t unixTime;
+  time(&unixTime);
+  // unixTime = UNIX aikaleima nykyisestä hetkestä
   Serial.println("\r\nKello synkronoitu");
   Serial.println(&timeinfo, "%Y-%m-%d %H:%M:%S");
-  Serial.println(now);
+  Serial.println(unixTime);
+
+  // Otetaan DHT22-sensori käyttöön
+  dht.setup(DHT_PIN, DHTesp::DHT_TYPE);
+}
+
+void sendData(TempAndHumidity data)
+{
+  // Lähetetään tiedot backendille
+  Serial.println("Tallennetaan dataa");
+  http.begin(String(SERVER_URL) + "/measurements");
+  http.addHeader("Content-Type", "application/json");
+  String body = "{\"temperature\":" + String(data.temperature) + ",\"humidity\":" + String(data.humidity) + "}";
+  int statusCode = http.POST(body);
+
+  if (statusCode > 0)
+  {
+    Serial.println("Tiedot lähetetty onnistuneesti.");
+  }
+  else
+  {
+    Serial.printf("Virhe tietojen lähetyksessä. Error : %s", http.errorToString(statusCode).c_str());
+  }
 }
 
 void loop()
 {
-  delay(10);
+  // Luetaan DHT-22 sensorin arvot
+  TempAndHumidity measuredData = dht.getTempAndHumidity();
+
+  if ((!isnan(measuredData.temperature) && measuredData.temperature != latestMeasuredData.temperature) || (!isnan(measuredData.humidity) && measuredData.humidity != latestMeasuredData.humidity))
+  {
+    Serial.println("TIEDOT MUUTTUNEET;::");
+
+    // vaihdetaan viimeisin mittaustulos
+    sendData(measuredData);
+    latestMeasuredData = measuredData;
+  }
+
+  delay(5000); // Viive....
 }
