@@ -1,0 +1,51 @@
+# "org" ensures this Service is used with the correct Serverless Framework Access Key.
+org: noajulkunen
+# "app" enables Serverless Framework Dashboard features and sharing them with other Services.
+app: iot-temperature-sensor
+# "service" is the name of this project. This will also be added to your AWS resource names.
+service: backend
+
+useDotenv: true
+
+plugins:
+  - serverless-offline
+
+provider:
+  name: aws
+  runtime: nodejs24.x
+  architecture: arm64
+  region: eu-north-1
+
+  environment:
+    DYNAMODB_TABLE_NAME: ${self:custom.DYNAMODB_TABLE_NAME}
+
+custom:
+  DYNAMODB_TABLE_NAME: ${env:DYNAMODB_TABLE_NAME}
+
+functions:
+  getMeasurement:
+    handler: handler.getMeasurement
+    events:
+      - httpApi:
+          path: /measurement/{measurementId}
+          method: get
+  createMeasurement:
+    handler: handler.createMeasurement
+    events:
+      - httpApi:
+          path: /measurement
+          method: post
+
+resources:
+  Resources:
+    Dynamotable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:custom.DYNAMODB_TABLE_NAME}
+        AttributeDefinitions:
+          - AttributeName: measurementId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: measurementId
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
