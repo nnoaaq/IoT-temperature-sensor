@@ -4,9 +4,10 @@
 #include "secrets.h"
 #include <DHTesp.h>
 #include <HTTPClient.h>
+
 #define DHT_PIN 14
 #define DHT_TYPE DHT22
-
+#define CUSTOM_SENSOR_NAME "Jääkaappi"
 HTTPClient http;
 DHTesp dht;
 // Viimeinen mittaus-muuttuja
@@ -51,9 +52,9 @@ void sendData(TempAndHumidity data)
   Serial.println("Tallennetaan dataa");
   http.begin(String(SERVER_URL) + "/measurements");
   http.addHeader("Content-Type", "application/json");
-  String body = "{\"temperature\":" + String(data.temperature) + ",\"humidity\":" + String(data.humidity) + "}";
+  String body = "{\"temperature\":" + String(data.temperature, 1) + ",\"humidity\":" + String(data.humidity, 1) + ",\"sensorId\":\"" + String(WiFi.macAddress()) + "\"" + ",\"sensorName\":\"" + String(CUSTOM_SENSOR_NAME) + "\"" + "}";
+  Serial.println(body);
   int statusCode = http.POST(body);
-
   if (statusCode > 0)
   {
     Serial.println("Tiedot lähetetty onnistuneesti.");
@@ -72,9 +73,9 @@ void loop()
   if ((!isnan(measuredData.temperature) && measuredData.temperature != latestMeasuredData.temperature) || (!isnan(measuredData.humidity) && measuredData.humidity != latestMeasuredData.humidity))
   {
     Serial.println("TIEDOT MUUTTUNEET;::");
-
-    // vaihdetaan viimeisin mittaustulos
+    // aloitetaan datan lähetys backendille
     sendData(measuredData);
+    // vaihdetaan viimeisin mittaustulos
     latestMeasuredData = measuredData;
   }
 

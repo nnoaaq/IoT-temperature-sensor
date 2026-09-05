@@ -1,2 +1,6 @@
 secrets.h
 **/secrets.h
+**/.serverless
+
+**/node_modules
+**/.env
