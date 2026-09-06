@@ -15,6 +15,18 @@ provider:
   runtime: nodejs24.x
   architecture: arm64
   region: eu-north-1
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+            - dynamodb:Scan
+          Resource:
+            - Fn::GetAtt: [Dynamotable, Arn]
 
   environment:
     DYNAMODB_TABLE_NAME: ${self:custom.DYNAMODB_TABLE_NAME}
@@ -35,6 +47,24 @@ functions:
       - httpApi:
           path: /measurement
           method: post
+  deleteMeasurement:
+    handler: handler.deleteMeasurement
+    events:
+      - httpApi:
+          path: /measurement/{measurementId}
+          method: delete
+  updateMeasurement:
+    handler: handler.updateMeasurement
+    events:
+      - httpApi:
+          path: /measurement/{measurementId}
+          method: put
+  getAllMeasurements:
+    handler: handler.getAllMeasurements
+    events:
+      - httpApi:
+          path: /measurements
+          method: get
 
 resources:
   Resources:

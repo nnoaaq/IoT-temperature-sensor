@@ -50,7 +50,7 @@ void sendData(TempAndHumidity data)
 {
   // Lähetetään tiedot backendille
   Serial.println("Tallennetaan dataa");
-  http.begin(String(SERVER_URL) + "/measurements");
+  http.begin(String(SERVER_URL) + "/measurement");
   http.addHeader("Content-Type", "application/json");
   String body = "{\"temperature\":" + String(data.temperature, 1) + ",\"humidity\":" + String(data.humidity, 1) + ",\"sensorId\":\"" + String(WiFi.macAddress()) + "\"" + ",\"sensorName\":\"" + String(CUSTOM_SENSOR_NAME) + "\"" + "}";
   Serial.println(body);
