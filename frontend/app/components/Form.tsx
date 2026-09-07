@@ -31,6 +31,9 @@ export const Form = ({
 }: {
   measurementsData: MeasurementType[];
 }) => {
+  if (measurementsData.length === 0) {
+    return <div>Mittaustuloksia ei löytynyt</div>;
+  }
   // Kerätään taulukko kaikista sensoreista
   const allSensors = measurementsData.map((measurement) => {
     return {
@@ -45,7 +48,7 @@ export const Form = ({
   );
   // useState valitulle sensorille, default = ensimmäinen uniikki sensori.
   const [selectedSensor, setSelectedSensor] = useState(
-    uniqueSensors[0].sensorId,
+    uniqueSensors[0]?.sensorId,
   );
   // useState valitulle päivälle, default = kaikki päivät
   const [selectedDay, setSelectedDay] = useState("all");
