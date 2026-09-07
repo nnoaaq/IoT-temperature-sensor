@@ -7,7 +7,7 @@
 
 #define DHT_PIN 14
 #define DHT_TYPE DHT22
-#define CUSTOM_SENSOR_NAME "Jääkaappi"
+#define CUSTOM_SENSOR_NAME "Olohuone"
 HTTPClient http;
 DHTesp dht;
 // Viimeinen mittaus-muuttuja
@@ -48,12 +48,16 @@ void setup()
 
 void sendData(TempAndHumidity data)
 {
+  time_t unixTime;
+  time(&unixTime);
   // Lähetetään tiedot backendille
   Serial.println("Tallennetaan dataa");
   http.begin(String(SERVER_URL) + "/measurement");
   http.addHeader("Content-Type", "application/json");
-  String body = "{\"temperature\":" + String(data.temperature, 1) + ",\"humidity\":" + String(data.humidity, 1) + ",\"sensorId\":\"" + String(WiFi.macAddress()) + "\"" + ",\"sensorName\":\"" + String(CUSTOM_SENSOR_NAME) + "\"" + "}";
+  String body = "{\"temperature\":" + String(data.temperature, 1) + ",\"humidity\":" + String(data.humidity, 1) + ",\"sensorId\":\"" + String(WiFi.macAddress()) + "\"" + ",\"sensorName\":\"" + String(CUSTOM_SENSOR_NAME) + "\"" + ",\"timeStamp\":\"" + String(unixTime) + "\""
+                                                                                                                                                                                                                                                                              "}";
   Serial.println(body);
+
   int statusCode = http.POST(body);
   if (statusCode > 0)
   {
