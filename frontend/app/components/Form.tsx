@@ -17,6 +17,7 @@ import {
   convertUnixTimestampWithHoursAndMinutes,
 } from "../utils/time";
 import { useState } from "react";
+import { SensorType } from "../types/sensor";
 Chart.register(
   CategoryScale,
   LinearScale,
@@ -34,34 +35,35 @@ export const Form = ({
   if (measurementsData.length === 0) {
     return <div>Mittaustuloksia ei löytynyt</div>;
   }
-  // Kerätään taulukko kaikista sensoreista
-  const allSensors = measurementsData.map((measurement) => {
-    return {
-      sensorName: measurement.measurementData.sensorName,
-      sensorId: measurement.measurementData.sensorId,
-    };
+  // mäppi kaikista sensoreista (ei duplikaatteja)
+  // {sensorName:string, sensorId:string}
+  const sensorList = new Map<String, SensorType>();
+  measurementsData.forEach((measurement) => {
+    const { sensorId, sensorName } = measurement.measurementData;
+    // myöhemmin löytynyt ID korvaa aiemman
+    sensorList.set(sensorId, {
+      sensorId: sensorId,
+      sensorName: sensorName,
+    });
   });
 
-  // Muodostetaan taulukko uniikeista sensoreista (ei duplikaatteja)
-  const uniqueSensors = Array.from(
-    new Map(allSensors.map((sensor) => [sensor.sensorId, sensor])).values(),
-  );
-  // useState valitulle sensorille, default = ensimmäinen uniikki sensori.
-  const [selectedSensor, setSelectedSensor] = useState(
-    uniqueSensors[0]?.sensorId,
-  );
+  // useState valitulle sensorille, default = ensimmäinen  sensori.
+  const firstSensor = sensorList.values().next().value;
+  const [selectedSensor, setSelectedSensor] = useState(firstSensor);
+
   // useState valitulle päivälle, default = kaikki päivät
   const [selectedDay, setSelectedDay] = useState("all");
 
   // Näytetään vain haluttujen sensoreiden data
   const filteredMeasurements: MeasurementType[] = measurementsData
     .filter((measurement) => {
-      const sensors = measurement.measurementData.sensorId === selectedSensor;
+      const sensors =
+        measurement.measurementData.sensorId === selectedSensor?.sensorId;
       const days =
         selectedDay == "all"
           ? true
           : convertUnixTimestamp(measurement.measurementData.timeStamp) ==
-            convertUnixTimestamp(selectedDay);
+            selectedDay;
       return sensors && days;
     })
     .sort(
@@ -70,15 +72,15 @@ export const Form = ({
         Number(b.measurementData.timeStamp),
     );
 
-  // Muodostetaan taulukko uniikeista päivämääristä (ei duplikaatteja)
-  const uniqueDays = Array.from(
-    new Map(
-      measurementsData.map((measurement) => [
-        convertUnixTimestamp(measurement.measurementData.timeStamp),
-        measurement,
-      ]),
-    ).values(),
-  );
+  // mäppi kaikista päivämääristä
+  const dayList = new Map<String, { timeStamp: string }>();
+  measurementsData.forEach((measurement) => {
+    const { timeStamp } = measurement.measurementData;
+    dayList.set(convertUnixTimestamp(timeStamp), {
+      timeStamp: convertUnixTimestamp(timeStamp),
+    });
+  });
+
   // Luodaan labelit löytyneistä päivämääristä
   const labels = [
     ...filteredMeasurements.map((measurement) => {
@@ -87,17 +89,13 @@ export const Form = ({
       );
     }),
   ];
-
   // Asetukset taulukkoa varten
   const options = {
     responsive: true,
     plugins: {
-      legend: {
-        position: "top" as const,
-      },
       title: {
         display: true,
-        text: `Anturin ${uniqueSensors.filter((sensor) => sensor.sensorId === selectedSensor).map((sensor) => sensor.sensorName)} mittausdata`,
+        text: `Anturin ${selectedSensor?.sensorName} mittausdata`,
       },
     },
   };
@@ -128,7 +126,7 @@ export const Form = ({
     ],
   };
   return (
-    <div>
+    <div className="">
       <h1 className="text-amber-500 uppercase tracking-widest">
         Mittaustulokset
       </h1>
@@ -141,13 +139,13 @@ export const Form = ({
         </label>
         <select
           onChange={(e) => {
-            setSelectedSensor(e.target.value);
+            setSelectedSensor(sensorList.get(e.target.value));
           }}
           name="selectSensor"
           className="p-2 border border-zinc-200 w-full rounded-lg bg-zinc-50 shadow-xs cursor-pointer outline-none focus:border-amber-500 hover:border-amber-500 "
         >
-          {uniqueSensors &&
-            uniqueSensors.map((sensor) => (
+          {sensorList &&
+            [...sensorList.values()].map((sensor) => (
               <option key={sensor.sensorId} value={sensor.sensorId}>
                 {sensor.sensorName}
               </option>
@@ -167,13 +165,10 @@ export const Form = ({
           className="p-2 border border-zinc-200 w-full rounded-lg bg-zinc-50 shadow-xs cursor-pointer outline-none focus:border-amber-500 hover:border-amber-500 "
         >
           <option value="all">Kaikki päivät</option>
-          {uniqueDays &&
-            uniqueDays.map((measurement) => (
-              <option
-                key={measurement.measurementData.timeStamp}
-                value={measurement.measurementData.timeStamp}
-              >
-                {convertUnixTimestamp(measurement.measurementData.timeStamp)}
+          {dayList &&
+            [...dayList.values()].map((day, index) => (
+              <option key={index} value={day.timeStamp}>
+                {day.timeStamp}
               </option>
             ))}
         </select>

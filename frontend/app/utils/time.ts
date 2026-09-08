@@ -9,7 +9,7 @@ export const convertUnixTimestampWithHoursAndMinutes = (timestamp: string) => {
       minute: "2-digit",
     }).format(timeObj);
   } catch (error) {
-    return 0;
+    return "0";
   }
 };
 export const convertUnixTimestamp = (timestamp: string) => {
@@ -18,6 +18,6 @@ export const convertUnixTimestamp = (timestamp: string) => {
     const timeObj = new Date(Number(timestamp) * 1000);
     return new Intl.DateTimeFormat("fi-FI").format(timeObj);
   } catch (error) {
-    return 0;
+    return "0";
   }
 };

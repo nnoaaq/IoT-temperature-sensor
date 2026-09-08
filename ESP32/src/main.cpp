@@ -7,7 +7,7 @@
 
 #define DHT_PIN 14
 #define DHT_TYPE DHT22
-#define CUSTOM_SENSOR_NAME "Olohuone"
+#define CUSTOM_SENSOR_NAME "Makuuhuone"
 HTTPClient http;
 DHTesp dht;
 // Viimeinen mittaus-muuttuja
