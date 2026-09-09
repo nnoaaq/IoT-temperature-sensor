@@ -7,11 +7,9 @@
 
 #define DHT_PIN 14
 #define DHT_TYPE DHT22
-#define CUSTOM_SENSOR_NAME "Makuuhuone"
+#define CUSTOM_SENSOR_NAME "Olohuone"
 HTTPClient http;
 DHTesp dht;
-// Viimeinen mittaus-muuttuja
-TempAndHumidity latestMeasuredData = {-999.0, -999.0};
 
 void setup()
 {
@@ -74,14 +72,7 @@ void loop()
   // Luetaan DHT-22 sensorin arvot
   TempAndHumidity measuredData = dht.getTempAndHumidity();
 
-  if ((!isnan(measuredData.temperature) && measuredData.temperature != latestMeasuredData.temperature) || (!isnan(measuredData.humidity) && measuredData.humidity != latestMeasuredData.humidity))
-  {
-    Serial.println("TIEDOT MUUTTUNEET;::");
-    // aloitetaan datan lähetys backendille
-    sendData(measuredData);
-    // vaihdetaan viimeisin mittaustulos
-    latestMeasuredData = measuredData;
-  }
+  sendData(measuredData);
 
-  delay(5000); // Viive....
+  delay(1000 * 60 * 15); // Viive.... 15 min
 }

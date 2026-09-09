@@ -1,4 +1,4 @@
-import { Form } from "./components/Form";
+import { Form } from "./components/Form_Memo";
 import { getMeasurements } from "./lib/Api";
 import { MeasurementType } from "./types/measurement";
 
