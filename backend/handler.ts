@@ -8,7 +8,12 @@ import {
   ScanCommand,
 } from "@aws-sdk/lib-dynamodb";
 import { ConditionalCheckFailedException } from "@aws-sdk/client-dynamodb";
+import { SendEmailCommand, SESv2Client } from "@aws-sdk/client-sesv2";
 
+const ses = new SESv2Client({
+  region: "eu-north-1",
+});
+const emailAddress = process.env.EMAIL_ADDRESS;
 const dynamodb = documentClient;
 const tableName = process.env.DYNAMODB_TABLE_NAME;
 const headers = {
@@ -24,6 +29,7 @@ class MyError extends Error {
   }
 }
 const handleError = (error: unknown) => {
+  console.log("virhe", error);
   if (error instanceof MyError) {
     return {
       statusCode: error.statusCode,
@@ -38,7 +44,27 @@ const handleError = (error: unknown) => {
     }),
   };
 };
-
+export async function sendEmail(subject: string, message: string) {
+  const command = new SendEmailCommand({
+    FromEmailAddress: emailAddress,
+    Destination: {
+      ToAddresses: [`${emailAddress}`],
+    },
+    Content: {
+      Simple: {
+        Subject: {
+          Data: subject,
+        },
+        Body: {
+          Text: {
+            Data: message,
+          },
+        },
+      },
+    },
+  });
+  const response = await ses.send(command);
+}
 export const createMeasurement = async (
   event: APIGatewayProxyEventV2,
 ): Promise<APIGatewayProxyResultV2> => {
@@ -47,6 +73,21 @@ export const createMeasurement = async (
 
     const measurementId = crypto.randomUUID();
     const measurementData = JSON.parse(event.body as string);
+
+    // lähetään sähköposti jos lämpötila alle raja-arvon
+    const minTemperature = -25;
+    const maxTemperature = 25;
+    const measuredTemperature = Number(measurementData?.temperature);
+    if (
+      measuredTemperature < minTemperature ||
+      measuredTemperature > maxTemperature
+    ) {
+      const { sensorId, sensorName } = measurementData;
+      sendEmail(
+        "Mittaustulos raja-arvojen ulkopuolella!",
+        `Sensorin ${sensorName} #${sensorId} mittaama lämpötila ${measuredTemperature} °C.`,
+      );
+    }
 
     await dynamodb.send(
       new PutCommand({

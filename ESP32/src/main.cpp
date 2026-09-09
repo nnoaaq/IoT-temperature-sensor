@@ -32,6 +32,7 @@ void setup()
   while (!getLocalTime(&timeinfo))
   {
     Serial.print(".");
+    delay(500);
   }
   time_t unixTime;
   time(&unixTime);

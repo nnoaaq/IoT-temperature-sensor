@@ -27,12 +27,19 @@ provider:
             - dynamodb:Scan
           Resource:
             - Fn::GetAtt: [Dynamotable, Arn]
+        - Effect: Allow
+          Action:
+            - ses:SendEmail
+            - ses:SendRawMail
+          Resource: "*"
 
   environment:
     DYNAMODB_TABLE_NAME: ${self:custom.DYNAMODB_TABLE_NAME}
+    EMAIL_ADDRESS: ${self:custom.EMAIL_ADDRESS}
 
 custom:
   DYNAMODB_TABLE_NAME: ${env:DYNAMODB_TABLE_NAME}
+  EMAIL_ADDRESS: ${env:EMAIL_ADDRESS}
 
 functions:
   getMeasurement:

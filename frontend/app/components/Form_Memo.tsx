@@ -5,6 +5,7 @@ import { SensorType } from "../types/sensor";
 import { Line } from "react-chartjs-2";
 import {
   CategoryScale,
+  elements,
   Legend,
   LinearScale,
   LineElement,
@@ -112,7 +113,15 @@ export const Form = ({ measurements }: { measurements: MeasurementType[] }) => {
         borderColor: "#f59e0b",
         backgroundColor: "#f59e0b",
         tension: 0.2,
+        pointRadius: 0,
+        pointHoverRadius: 6,
+        pointHitRadius: 25,
       },
+    ],
+  };
+  const dataHumidity = {
+    labels: chartLabels,
+    datasets: [
       {
         label: "Kosteus %",
         data: measurementsBySensorId[selectedSensor]
@@ -128,16 +137,25 @@ export const Form = ({ measurements }: { measurements: MeasurementType[] }) => {
         borderColor: "#2a59f1",
         backgroundColor: "#2a59f1",
         tension: 0.2,
+        pointRadius: 0,
+        pointHoverRadius: 6,
+        pointHitRadius: 25,
       },
     ],
   };
   const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+
     scales: {
       x: {
         ticks: {
           // maxTicksLimit: 10,
+          maxRotation: 0,
+          autoSkip: true,
         },
       },
+      y: {},
     },
     plugins: {
       title: {
@@ -196,8 +214,11 @@ export const Form = ({ measurements }: { measurements: MeasurementType[] }) => {
             ))}
         </select>
       </div>
-      <div>
+      <div className="w-full h-75">
         <Line options={chartOptions} data={data} />
+      </div>
+      <div className="w-full  h-75">
+        <Line options={chartOptions} data={dataHumidity} />
       </div>
     </div>
   );
