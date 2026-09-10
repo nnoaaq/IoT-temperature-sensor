@@ -80,6 +80,12 @@ functions:
       - httpApi:
           path: /temperature/limit
           method: put
+  getTemperatureLimits:
+    handler: handler.getTemperatureLimits
+    events:
+      - httpApi:
+          path: /temperature/{sensorId}
+          method: get
 resources:
   Resources:
     Dynamotable:

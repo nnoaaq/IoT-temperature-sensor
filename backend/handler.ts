@@ -16,6 +16,8 @@ const ses = new SESv2Client({
 const emailAddress = process.env.EMAIL_ADDRESS;
 const dynamodb = documentClient;
 const tableName = process.env.DYNAMODB_TABLE_NAME;
+const limitTableName = process.env.DYNAMODB_TABLE_NAME_TEMPERATURE;
+
 const headers = {
   "content-type": "application/json",
 };
@@ -271,7 +273,6 @@ export const updateTemperatureLimit = async (
     if (!maxTemperature)
       throw new MyError(404, { message: "Yläraja lämpötilalle puuttuu." });
     if (!sensorId) throw new MyError(404, { message: "SensorID puuttuu" });
-    const limitTableName = process.env.DYNAMODB_TABLE_NAME_TEMPERATURE;
     await dynamodb.send(
       new PutCommand({
         TableName: limitTableName,
@@ -289,6 +290,27 @@ export const updateTemperatureLimit = async (
         message: `Raja-arvot tallennettu sensorille ${sensorId}`,
       }),
     };
+  } catch (error) {
+    return handleError(error);
+  }
+};
+export const getTemperatureLimits = async (
+  event: APIGatewayProxyEventV2,
+): Promise<APIGatewayProxyResultV2> => {
+  try {
+    // /temperature/{sensorId} //GET
+    const sensorId = event.pathParameters?.sensorId as string;
+    const output = await dynamodb.send(
+      new GetCommand({
+        TableName: limitTableName,
+        Key: {
+          sensorId: sensorId,
+        },
+      }),
+    );
+    if (!output.Item)
+      throw new MyError(404, { message: "Mittaustuloksia ei löytynyt." });
+    return { statusCode: 200, headers, body: JSON.stringify(output.Item) };
   } catch (error) {
     return handleError(error);
   }
