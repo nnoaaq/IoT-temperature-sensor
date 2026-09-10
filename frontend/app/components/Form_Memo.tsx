@@ -27,6 +27,7 @@ Chart.register(
   Legend,
   Tooltip,
 );
+
 export const Form = ({ measurements }: { measurements: MeasurementType[] }) => {
   // jokainen sensori (ei duplikaatteja)
   const sensors = useMemo(() => {
@@ -213,6 +214,41 @@ export const Form = ({ measurements }: { measurements: MeasurementType[] }) => {
               </option>
             ))}
         </select>
+      </div>
+      <div>
+        <p className="text-zinc-500 uppercase tracking-widest text-sm mb-2">
+          Vaihda raja-arvot hälytykselle
+        </p>
+        <div className="flex gap-2 justify-center sm:justify-normal">
+          <div>
+            <div className="relative flex items-center">
+              <input
+                onFocus={(e) => e.target.select()}
+                type="number"
+                className="p-2 border border-zinc-200 rounded-xl bg-zinc-50 w-30 text-center shadow-xs cursor-pointer  hover:border-amber-500 outline-amber-500 "
+                placeholder="Min"
+              />
+              <span className="absolute right-7">°C</span>
+            </div>
+            <p className="text-zinc-400 text-xs uppercase tracking-widest text-sm text-center">
+              Alin
+            </p>
+          </div>
+          <div>
+            <div className="relative flex items-center">
+              <input
+                onFocus={(e) => e.target.select()}
+                type="number"
+                className="p-2 border border-zinc-200 rounded-xl bg-zinc-50 w-30 text-center shadow-xs cursor-pointer  hover:border-amber-500 outline-amber-500"
+                placeholder="Max"
+              />
+              <span className="absolute right-7">°C</span>
+            </div>
+            <p className="text-zinc-400 text-xs uppercase tracking-widest text-sm text-center">
+              Ylin
+            </p>
+          </div>
+        </div>
       </div>
       <div className="w-full h-75">
         <Line options={chartOptions} data={data} />

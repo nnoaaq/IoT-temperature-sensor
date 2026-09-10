@@ -36,10 +36,12 @@ provider:
   environment:
     DYNAMODB_TABLE_NAME: ${self:custom.DYNAMODB_TABLE_NAME}
     EMAIL_ADDRESS: ${self:custom.EMAIL_ADDRESS}
+    DYNAMODB_TABLE_NAME_TEMPERATURE: ${self:custom.DYNAMODB_TABLE_NAME_TEMPERATURE}
 
 custom:
   DYNAMODB_TABLE_NAME: ${env:DYNAMODB_TABLE_NAME}
   EMAIL_ADDRESS: ${env:EMAIL_ADDRESS}
+  DYNAMODB_TABLE_NAME_TEMPERATURE: ${env:DYNAMODB_TABLE_NAME_TEMPERATURE}
 
 functions:
   getMeasurement:
@@ -72,7 +74,12 @@ functions:
       - httpApi:
           path: /measurements
           method: get
-
+  updateTemperatureLimit:
+    handler: handler.updateTemperatureLimit
+    events:
+      - httpApi:
+          path: /temperature/limit
+          method: put
 resources:
   Resources:
     Dynamotable:
@@ -84,5 +91,16 @@ resources:
             AttributeType: S
         KeySchema:
           - AttributeName: measurementId
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
+    LimitTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:custom.DYNAMODB_TABLE_NAME_TEMPERATURE}
+        AttributeDefinitions:
+          - AttributeName: sensorId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: sensorId
             KeyType: HASH
         BillingMode: PAY_PER_REQUEST

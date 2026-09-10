@@ -255,3 +255,41 @@ export const getAllMeasurements = async (
     return handleError(error);
   }
 };
+
+export const updateTemperatureLimit = async (
+  event: APIGatewayProxyEventV2,
+): Promise<APIGatewayProxyResultV2> => {
+  try {
+    // haetaan bodystä annetut arvot
+    // minTemperature: number
+    // maxTemperature:number
+    const { minTemperature, maxTemperature, sensorId } = JSON.parse(
+      event.body as string,
+    );
+    if (!minTemperature)
+      throw new MyError(404, { message: "Alaraja lämpötilalle puuttuu." });
+    if (!maxTemperature)
+      throw new MyError(404, { message: "Yläraja lämpötilalle puuttuu." });
+    if (!sensorId) throw new MyError(404, { message: "SensorID puuttuu" });
+    const limitTableName = process.env.DYNAMODB_TABLE_NAME_TEMPERATURE;
+    await dynamodb.send(
+      new PutCommand({
+        TableName: limitTableName,
+        Item: {
+          sensorId: sensorId,
+          temperatureLimitMin: minTemperature,
+          temperatureLimitMax: maxTemperature,
+        },
+      }),
+    );
+    return {
+      statusCode: 200,
+      headers,
+      body: JSON.stringify({
+        message: `Raja-arvot tallennettu sensorille ${sensorId}`,
+      }),
+    };
+  } catch (error) {
+    return handleError(error);
+  }
+};
