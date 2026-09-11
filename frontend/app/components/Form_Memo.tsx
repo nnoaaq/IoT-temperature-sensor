@@ -216,6 +216,14 @@ export const Form = ({ measurements }: { measurements: MeasurementType[] }) => {
     },
   };
   const [showSettings, setShowSettings] = useState(false);
+  useEffect(() => {
+    if (showSettings) {
+      document.body.classList.add("overflow-hidden");
+    } else {
+      document.body.classList.remove("overflow-hidden");
+    }
+    return () => document.body.classList.remove("overflow-hidden");
+  }, [showSettings]);
   return (
     <div className="flex flex-col gap-2">
       {showSettings && (

@@ -22,7 +22,7 @@ export const TemperatureLimits = ({
     temperatureLimitMin: "0",
   });
   return (
-    <div className="absolute inset-0 w-full flex justify-center  bg-zinc-900/80">
+    <div className="absolute inset-0 w-full flex justify-center  bg-zinc-900/80 ">
       <div className="bg-zinc-100 w-full max-w-md h-fit max-h-70 m-2 rounded-xl p-2  flex flex-col gap-5">
         <div className="flex justify-between">
           <p className="text-zinc-500 uppercase tracking-widest text-sm mb-2">
