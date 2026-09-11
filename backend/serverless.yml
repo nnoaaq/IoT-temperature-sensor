@@ -29,6 +29,15 @@ provider:
             - Fn::GetAtt: [Dynamotable, Arn]
         - Effect: Allow
           Action:
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+            - dynamodb:Scan
+          Resource:
+            - Fn::GetAtt: [LimitTable, Arn]
+        - Effect: Allow
+          Action:
             - ses:SendEmail
             - ses:SendRawMail
           Resource: "*"
