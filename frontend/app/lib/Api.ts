@@ -3,7 +3,9 @@ export const getMeasurements = async () => {
   try {
     // haetaan mittaustulokset tietokannasta
     const API_SERVER = process.env.API_URL || "";
-    const response = await fetch(`${API_SERVER}/measurements`);
+    const response = await fetch(`${API_SERVER}/measurements`, {
+      cache: "no-cache",
+    });
     if (!response.ok) return [];
     return await response.json();
   } catch (error) {
