@@ -1,79 +1,103 @@
 #include <Arduino.h>
+#include <secrets.h>
 #include <WiFi.h>
 #include <time.h>
-#include "secrets.h"
-#include <DHTesp.h>
 #include <HTTPClient.h>
+#include <DHTesp.h>
 
-#define DHT_PIN 14
-#define DHT_TYPE DHT22
-#define CUSTOM_SENSOR_NAME "Olohuone"
-HTTPClient http;
-DHTesp dht;
+DHTesp DHT;
+
+const int LED_PIN = 5;
+const int SENSOR_PIN = 1;
+const char *SSID = WIFI_SSID;
+const char *PASSWORD = WIFI_PASSWORD;
+const char *SERVER_URL = BACKEND_SERVER_URL;
+const char *TIMEZONE_INFO = "EET-2EEST,M3.5.0/3,M10.5.0/4"; // Koodi Suomen ajalle
+const char *NTP_SERVER = "fi.pool.ntp.org";                 // NTP - palvelin
+const char *CUSTOM_SENSOR_NAME = "Keittiö";                 // Sensorin nimi (näkyy frontendissä)
+
+void saveMeasurements(TempAndHumidity measurements)
+{
+  // Alustetaan HTTP
+  HTTPClient HTTP;
+  HTTP.begin(String(SERVER_URL) + "/measurement");
+  HTTP.addHeader("Content-Type", "application/json");
+
+  // Kellonaika
+  time_t unixTime;
+  time(&unixTime);
+
+  // HTTP - post pyynnön body
+  String body = "{\"temperature\":" + String(measurements.temperature, 1) +
+                ",\"humidity\":" + String(measurements.humidity, 1) +
+                ",\"sensorId\":\"" + String(WiFi.macAddress()) + "\"" +
+                ",\"sensorName\":\"" + String(CUSTOM_SENSOR_NAME) + "\"" +
+                ",\"timeStamp\":\"" + String(unixTime) + "\""
+                                                         "}";
+  Serial.println(body);
+
+  int statusCode = HTTP.POST(body);
+  if (statusCode > 0)
+  {
+    // Onnistunut lähetys
+    // Tieto onnistumisesta näytölle | vilkuta vihreää lediä...
+    Serial.println("Tiedot lähetetty onnistuneesti");
+  }
+  else
+  {
+    // Epäonnistunut lähetys
+    // Tieto epäonnistumisesta näytölle | vilkuta punaista lediä...
+    Serial.printf("\nVirhe tietojen lähettämisessä. Error : %s", HTTP.errorToString(statusCode));
+  }
+  HTTP.end();
+}
 
 void setup()
 {
   Serial.begin(115200);
+  delay(5000); // Serial kerittävä mukaan
 
-  // Muodostetaan WiFi yhteys
-  Serial.println("Haetaan internet-yhteyttä");
-  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  // Asetetaan LED - pin (GPIO_5) OUTPUT - tilaan
+  pinMode(LED_PIN, OUTPUT);
+  // Asetetaan DHT11 - pin (GPIO_1) INPUT - tilaan
+  pinMode(SENSOR_PIN, INPUT);
+
+  // Haetaan WiFi - yhteys
+  WiFi.begin(SSID, PASSWORD);
   while (WiFi.status() != WL_CONNECTED)
   {
-    Serial.print(".");
-    delay(100);
+    // WiFi - ei yhdistetty vielä
+    digitalWrite(LED_PIN, HIGH);
+    delay(500);
+    digitalWrite(LED_PIN, LOW);
+    delay(500);
   }
-  Serial.println("\r\nWiFi yhdistetty");
+  // WiFi yhdistetty
+  Serial.println("WiFi yhdistetty!");
+  digitalWrite(LED_PIN, HIGH);
 
   // Synkronoidaan kello
-  configTzTime("EET-2EEST,M3.5.0/3,M10.5.0/4", NTP_SERVER);
   struct tm timeinfo;
-  Serial.println("\nSynkronoidaan kelloa");
+  configTzTime(TIMEZONE_INFO, NTP_SERVER);
   while (!getLocalTime(&timeinfo))
   {
     Serial.print(".");
     delay(500);
   }
-  time_t unixTime;
-  time(&unixTime);
-  // unixTime = UNIX aikaleima nykyisestä hetkestä
-  Serial.println("\r\nKello synkronoitu");
-  Serial.println(&timeinfo, "%Y-%m-%d %H:%M:%S");
-  Serial.println(unixTime);
 
-  // Otetaan DHT22-sensori käyttöön
-  dht.setup(DHT_PIN, DHTesp::DHT_TYPE);
-}
+  // Otetaan DHT - anturi käyttöön
+  DHT.setup(SENSOR_PIN, DHTesp::DHT11);
+  delay(500);
 
-void sendData(TempAndHumidity data)
-{
-  time_t unixTime;
-  time(&unixTime);
-  // Lähetetään tiedot backendille
-  Serial.println("Tallennetaan dataa");
-  http.begin(String(SERVER_URL) + "/measurement");
-  http.addHeader("Content-Type", "application/json");
-  String body = "{\"temperature\":" + String(data.temperature, 1) + ",\"humidity\":" + String(data.humidity, 1) + ",\"sensorId\":\"" + String(WiFi.macAddress()) + "\"" + ",\"sensorName\":\"" + String(CUSTOM_SENSOR_NAME) + "\"" + ",\"timeStamp\":\"" + String(unixTime) + "\""
-                                                                                                                                                                                                                                                                              "}";
-  Serial.println(body);
+  // Luetaan lämpötila ja kosteus
+  TempAndHumidity measurement = DHT.getTempAndHumidity();
+  saveMeasurements(measurement);
 
-  int statusCode = http.POST(body);
-  if (statusCode > 0)
-  {
-    Serial.println("Tiedot lähetetty onnistuneesti.");
-  }
-  else
-  {
-    Serial.printf("Virhe tietojen lähetyksessä. Error : %s", http.errorToString(statusCode).c_str());
-  }
+  // Deep Sleep
+  esp_sleep_enable_timer_wakeup(15 * 60 * 1000000); // 15 minuuttia
+  esp_deep_sleep_start();
 }
 
 void loop()
 {
-  // Luetaan DHT-22 sensorin arvot
-  TempAndHumidity measuredData = dht.getTempAndHumidity();
-
-  sendData(measuredData);
-
-  delay(1000 * 60 * 15); // Viive.... 15 min
 }
