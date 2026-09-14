@@ -36,16 +36,12 @@ provider:
             - dynamodb:Scan
           Resource:
             - Fn::GetAtt: [LimitTable, Arn]
-        - Effect: Allow
-          Action:
-            - ses:SendEmail
-            - ses:SendRawMail
-          Resource: "*"
 
   environment:
     DYNAMODB_TABLE_NAME: ${self:custom.DYNAMODB_TABLE_NAME}
     EMAIL_ADDRESS: ${self:custom.EMAIL_ADDRESS}
     DYNAMODB_TABLE_NAME_TEMPERATURE: ${self:custom.DYNAMODB_TABLE_NAME_TEMPERATURE}
+    RESEND_API_KEY: ${env:RESEND_API_KEY}
 
 custom:
   DYNAMODB_TABLE_NAME: ${env:DYNAMODB_TABLE_NAME}

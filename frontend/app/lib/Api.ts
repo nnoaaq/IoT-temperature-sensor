@@ -38,6 +38,14 @@ export const updateTemperatureLimits = async (
 ) => {
   // päivitetään raja-arvot
   const API_SERVER = process.env.API_URL || "";
+  console.log("ID:::", sensorId);
+  console.log(
+    JSON.stringify({
+      sensorId: sensorId,
+      minTemperature: Number(temperatureLimits.temperatureLimitMin),
+      maxTemperature: Number(temperatureLimits.temperatureLimitMax),
+    }),
+  );
   await fetch(`${API_SERVER}/temperature/limit`, {
     method: "PUT",
     body: JSON.stringify({

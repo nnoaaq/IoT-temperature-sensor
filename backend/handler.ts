@@ -8,11 +8,9 @@ import {
   ScanCommand,
 } from "@aws-sdk/lib-dynamodb";
 import { ConditionalCheckFailedException } from "@aws-sdk/client-dynamodb";
-import { SendEmailCommand, SESv2Client } from "@aws-sdk/client-sesv2";
 
-const ses = new SESv2Client({
-  region: "eu-north-1",
-});
+import { Resend } from "resend";
+const resend = new Resend(process.env.RESEND_API_KEY);
 const emailAddress = process.env.EMAIL_ADDRESS;
 const dynamodb = documentClient;
 const tableName = process.env.DYNAMODB_TABLE_NAME;
@@ -47,25 +45,15 @@ const handleError = (error: unknown) => {
   };
 };
 export async function sendEmail(subject: string, message: string) {
-  const command = new SendEmailCommand({
-    FromEmailAddress: emailAddress,
-    Destination: {
-      ToAddresses: [`${emailAddress}`],
-    },
-    Content: {
-      Simple: {
-        Subject: {
-          Data: subject,
-        },
-        Body: {
-          Text: {
-            Data: message,
-          },
-        },
-      },
-    },
-  });
-  const response = await ses.send(command);
+  // lähetetään emailiin simppeli hälytys...
+  try {
+    const result = await resend.emails.send({
+      from: "onboarding@resend.dev",
+      to: emailAddress as string,
+      subject: subject,
+      html: `<p>${message}</p>`,
+    });
+  } catch (error) {}
 }
 export const createMeasurement = async (
   event: APIGatewayProxyEventV2,
@@ -77,20 +65,30 @@ export const createMeasurement = async (
     const measurementData = JSON.parse(event.body as string);
 
     // lähetään sähköposti jos lämpötila alle raja-arvon
-    const minTemperature = -25;
-    const maxTemperature = 25;
-    const measuredTemperature = Number(measurementData?.temperature);
-    if (
-      measuredTemperature < minTemperature ||
-      measuredTemperature > maxTemperature
-    ) {
-      const { sensorId, sensorName } = measurementData;
-      sendEmail(
-        "Mittaustulos raja-arvojen ulkopuolella!",
-        `Sensorin ${sensorName} #${sensorId} mittaama lämpötila ${measuredTemperature} °C.`,
-      );
+    let minTemperature, maxTemperature;
+    const sensorTemperatureLimits = await dynamodb.send(
+      new GetCommand({
+        TableName: limitTableName,
+        Key: {
+          sensorId: measurementData?.sensorId,
+        },
+      }),
+    );
+    if (sensorTemperatureLimits.Item) {
+      minTemperature = sensorTemperatureLimits.Item?.temperatureLimitMin;
+      maxTemperature = sensorTemperatureLimits.Item?.temperatureLimitMax;
+      const measuredTemperature = Number(measurementData?.temperature);
+      if (
+        measuredTemperature < minTemperature ||
+        measuredTemperature > maxTemperature
+      ) {
+        const { sensorId, sensorName } = measurementData;
+        await sendEmail(
+          "Mittaustulos raja-arvojen ulkopuolella!",
+          `Sensorin ${sensorName} #${sensorId} mittaama lämpötila ${measuredTemperature} °C.`,
+        );
+      }
     }
-
     await dynamodb.send(
       new PutCommand({
         TableName: tableName,
