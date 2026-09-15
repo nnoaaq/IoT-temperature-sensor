@@ -7,7 +7,9 @@ export const SettingModal = ({
   closeModal,
   limits,
   sensorId,
+  changeYLimits,
 }: {
+  changeYLimits: (field: string, value: string) => void;
   closeModal: () => void;
   limits: LimitType;
   sensorId: string;
@@ -21,8 +23,6 @@ export const SettingModal = ({
     minTemperature: String(limits.minTemperature),
   });
   const updateLimits = async (newLimits: LimitType) => {
-    console.log("muutettu", newLimits);
-    console.log("sensori", limits.sensorId);
     if (!limits.sensorId) return;
     await updateTemperatureLimits(limits.sensorId, newLimits);
   };
@@ -191,6 +191,38 @@ export const SettingModal = ({
             <h2 className="text-zinc-500 text-md uppercase">
               Vaihda taulukon Y-akselin arvoja
             </h2>
+            <div className="flex gap-5">
+              <div>
+                <label
+                  htmlFor="yMin"
+                  className="text-zinc-500 text-xs tracking-widest uppercase"
+                >
+                  Alaraja
+                </label>
+                <input
+                  placeholder="Haluttu alaraja"
+                  onChange={(e) => changeYLimits("min", e.target.value)}
+                  name="yMin"
+                  type="number"
+                  className="p-2 w-full border border-zinc-200 rounded-xl shadow-xs text-center outline-none hover:border-amber-500 focus:outline-amber-500 placeholder:italic"
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor="yMax"
+                  className="text-zinc-500 text-xs tracking-widest uppercase"
+                >
+                  Yläraja
+                </label>
+                <input
+                  placeholder="Haluttu yläraja"
+                  onChange={(e) => changeYLimits("max", e.target.value)}
+                  name="yMax"
+                  type="number"
+                  className="p-2 w-full border border-zinc-200 rounded-xl shadow-xs text-center outline-none hover:border-amber-500 focus:outline-amber-500 placeholder:italic"
+                />
+              </div>
+            </div>
           </div>
         </div>
       </div>

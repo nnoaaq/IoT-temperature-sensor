@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { use, useEffect, useMemo, useRef, useState } from "react";
 import { MeasurementType } from "../types/measurement";
 import { SensorType } from "../types/sensor";
 import { Line } from "react-chartjs-2";
@@ -145,6 +145,11 @@ export const Form = ({ measurements }: { measurements: MeasurementType[] }) => {
       },
     ],
   };
+  // y - akselin arvot
+  const [chartYLimits, setChartYLimits] = useState({
+    max: "auto",
+    min: "auto",
+  });
   const dataHumidity = {
     labels: chartLabels,
     datasets: [
@@ -172,7 +177,6 @@ export const Form = ({ measurements }: { measurements: MeasurementType[] }) => {
   const chartOptions = {
     responsive: true,
     maintainAspectRatio: false,
-
     scales: {
       x: {
         ticks: {
@@ -181,7 +185,10 @@ export const Form = ({ measurements }: { measurements: MeasurementType[] }) => {
           autoSkip: true,
         },
       },
-      y: {},
+      y: {
+        max: chartYLimits.max,
+        min: chartYLimits.min,
+      },
     },
     plugins: {
       title: {
@@ -196,9 +203,32 @@ export const Form = ({ measurements }: { measurements: MeasurementType[] }) => {
       },
     },
   };
-
+  const chartOptionsHumidity = {
+    responsive: true,
+    maintainAspectRatio: false,
+    scales: {
+      x: {
+        ticks: {
+          // maxTicksLimit: 10,
+          maxRotation: 0,
+          autoSkip: true,
+        },
+      },
+    },
+    plugins: {
+      title: {
+        display: true,
+        text: `Sensorin ${sensors.get(selectedSensor)?.sensorName} mittaustulokset`,
+      },
+      legend: {
+        display: true,
+        labels: {
+          color: "rgb(0, 0, 0)",
+        },
+      },
+    },
+  };
   const [showSettingsModal, setShowSettingsModal] = useState(false);
-
   return (
     <div className="flex flex-col gap-2">
       {showSettingsModal && (
@@ -206,6 +236,13 @@ export const Form = ({ measurements }: { measurements: MeasurementType[] }) => {
           closeModal={() => setShowSettingsModal(false)}
           limits={selectedSensorLimits}
           sensorId={selectedSensor}
+          changeYLimits={(field: string, value: string) => {
+            console.log("OK");
+            setChartYLimits((prevLimits) => ({
+              ...prevLimits,
+              [field]: Number(value),
+            }));
+          }}
         />
       )}
       <div className="flex justify-between">
@@ -276,10 +313,10 @@ export const Form = ({ measurements }: { measurements: MeasurementType[] }) => {
       </div>
 
       <div className="w-full h-75">
-        <Line options={chartOptions} data={data} />
+        <Line redraw options={chartOptions} data={data} />
       </div>
       <div className="w-full  h-75">
-        <Line options={chartOptions} data={dataHumidity} />
+        <Line options={chartOptionsHumidity} data={dataHumidity} />
       </div>
     </div>
   );
