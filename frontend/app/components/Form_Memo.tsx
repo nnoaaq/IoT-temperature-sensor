@@ -205,6 +205,7 @@ export const Form = ({ measurements }: { measurements: MeasurementType[] }) => {
         <SettingModal
           closeModal={() => setShowSettingsModal(false)}
           limits={selectedSensorLimits}
+          sensorId={selectedSensor}
         />
       )}
       <div className="flex justify-between">

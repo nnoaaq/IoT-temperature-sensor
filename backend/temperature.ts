@@ -45,7 +45,7 @@ export const createSensorLimits = async (
   try {
     // sensorin raja-arvojen lisäys / päivitys
     // jos arvoja ei tallennettu > luodaan
-    // jos arvot tallennettu > päivitetään
+    // jos arvot tallennettu > over-ride
     // sensorId:string
     // maxTemperature:number, minTemperature:number
     const { sensorId, ...fields } = JSON.parse(event.body as string);
@@ -113,7 +113,6 @@ export const updateSensorLimits = async (
       body: JSON.stringify((await output).Attributes),
     };
   } catch (error) {
-    console.log("ERHE", error);
     return handleError(error);
   }
 };
