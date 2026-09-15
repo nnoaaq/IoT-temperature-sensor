@@ -19,7 +19,7 @@ import {
   convertUnixTimestampWithHoursAndMinutes,
 } from "../utils/time";
 import { getTemperatureLimits, updateTemperatureLimits } from "../lib/Api";
-import { TemperatureLimits } from "./TemperatureLimits";
+import { SettingModal } from "./SettingModal";
 Chart.register(
   CategoryScale,
   LinearScale,
@@ -77,42 +77,23 @@ export const Form = ({ measurements }: { measurements: MeasurementType[] }) => {
     }, [measurements]);
   // useState valittua sensoria varten
   // sensorId, DEFAULT = ensimmäinen löytynyt sensori
+
+  // useState valittua sensoria varten
   const [selectedSensor, setSelectedSensor] = useState(
     sensors.values().next().value?.sensorId || "",
   );
 
-  // useState raja-arvoa varten
-  const [temperatureLimits, setTemperatureLimits] = useState({
-    sensorId: "",
-    temperatureLimitMax: "0",
-    temperatureLimitMin: "0",
-  });
-  // haetaan raja-arvo valitulle sensorille
+  // useState raja-arvoja varten
+  const [selectedSensorLimits, setSelectedSensorLimits] = useState({});
+  // haetaan uudet raja-arvot, kun valittu sensori vaihtuu
   useEffect(() => {
-    const fetchLimits = async () => {
-      const response = (await getTemperatureLimits(selectedSensor)) as {
-        statusCode: number;
-        limits?: {
-          sensorId: string;
-          temperatureLimitMax: string;
-          temperatureLimitMin: string;
-        };
-      };
-      if (response.statusCode != 200) return {};
-      if (response.limits) setTemperatureLimits(response.limits);
-      return response.limits;
+    const fetchSensors = async (sensorId: string) => {
+      const limits = await getTemperatureLimits(sensorId);
+      if (!limits?.sensorId) return setSelectedSensorLimits({});
+      setSelectedSensorLimits(limits);
     };
-    fetchLimits();
+    fetchSensors(selectedSensor);
   }, [selectedSensor]);
-  const callUpdateTemperatureLimits = (newLimits: {
-    temperatureLimitMax: string;
-    temperatureLimitMin: string;
-  }) => {
-    // painettu ala-komponentissa
-    updateTemperatureLimits(selectedSensor, newLimits);
-    // suljetaan modaali
-    setShowSettings(!showSettings);
-  };
   // setti uniikkeja päiviä kohden
   // päivittyy aina kun vaihdetaan sensoria
   const days = new Set<string>();
@@ -215,22 +196,15 @@ export const Form = ({ measurements }: { measurements: MeasurementType[] }) => {
       },
     },
   };
-  const [showSettings, setShowSettings] = useState(false);
-  useEffect(() => {
-    if (showSettings) {
-      document.body.classList.add("overflow-hidden");
-    } else {
-      document.body.classList.remove("overflow-hidden");
-    }
-    return () => document.body.classList.remove("overflow-hidden");
-  }, [showSettings]);
+
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+
   return (
     <div className="flex flex-col gap-2">
-      {showSettings && (
-        <TemperatureLimits
-          closeModal={() => setShowSettings(!showSettings)}
-          callUpdateTemperatureLimits={callUpdateTemperatureLimits}
-          limits={temperatureLimits}
+      {showSettingsModal && (
+        <SettingModal
+          closeModal={() => setShowSettingsModal(false)}
+          limits={selectedSensorLimits}
         />
       )}
       <div className="flex justify-between">
@@ -239,7 +213,7 @@ export const Form = ({ measurements }: { measurements: MeasurementType[] }) => {
         </h1>
         <span
           className="cursor-pointer hover:text-emerald-600"
-          onClick={(e) => setShowSettings(!showSettings)}
+          onClick={(e) => setShowSettingsModal(!showSettingsModal)}
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -273,8 +247,8 @@ export const Form = ({ measurements }: { measurements: MeasurementType[] }) => {
           className="p-2 border border-zinc-200 rounded-xl bg-zinc-50 w-full shadow-xs cursor-pointer  hover:border-amber-500 outline-amber-500"
         >
           {sensors &&
-            [...sensors.values()].map((sensor) => (
-              <option key={sensor.sensorId} value={sensor.sensorId}>
+            [...sensors.values()].map((sensor, index) => (
+              <option key={index} value={sensor.sensorId}>
                 {sensor.sensorName}
               </option>
             ))}

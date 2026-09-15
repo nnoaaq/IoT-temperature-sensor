@@ -1,8 +1,12 @@
 "use server";
+
+import { LimitType } from "../types/limit";
+
+const API_SERVER = process.env.API_URL;
+
 export const getMeasurements = async () => {
   try {
     // haetaan mittaustulokset tietokannasta
-    const API_SERVER = process.env.API_URL || "";
     const response = await fetch(`${API_SERVER}/measurements`, {
       cache: "no-cache",
     });
@@ -14,44 +18,22 @@ export const getMeasurements = async () => {
 };
 export const getTemperatureLimits = async (sensorId: string) => {
   try {
-    const API_SERVER = process.env.API_URL || "";
-    const response = await fetch(`${API_SERVER}/temperature/${sensorId}`);
-    if (!response.ok)
-      return {
-        statusCode: 404,
-      };
-    return {
-      statusCode: 200,
-      limits: await response.json(),
-    };
     // haetaan raja-arvot tietokannasta
+    const response = await fetch(`${API_SERVER}/sensor/${sensorId}`);
+    if (!response.ok) return {};
+    return await response.json();
   } catch (error) {
-    return [];
+    return {};
   }
 };
 export const updateTemperatureLimits = async (
   sensorId: string,
-  temperatureLimits: {
-    temperatureLimitMin: string;
-    temperatureLimitMax: string;
-  },
+  temperatureLimits: LimitType,
 ) => {
   // päivitetään raja-arvot
   const API_SERVER = process.env.API_URL || "";
-  console.log("ID:::", sensorId);
-  console.log(
-    JSON.stringify({
-      sensorId: sensorId,
-      minTemperature: Number(temperatureLimits.temperatureLimitMin),
-      maxTemperature: Number(temperatureLimits.temperatureLimitMax),
-    }),
-  );
-  await fetch(`${API_SERVER}/temperature/limit`, {
+  await fetch(`${API_SERVER}/sensor/${sensorId}`, {
     method: "PUT",
-    body: JSON.stringify({
-      sensorId: sensorId,
-      minTemperature: Number(temperatureLimits.temperatureLimitMin),
-      maxTemperature: Number(temperatureLimits.temperatureLimitMax),
-    }),
+    body: JSON.stringify(temperatureLimits),
   });
 };
