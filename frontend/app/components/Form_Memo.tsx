@@ -1,5 +1,5 @@
 "use client";
-import { use, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { MeasurementType } from "../types/measurement";
 import { SensorType } from "../types/sensor";
 import { Line } from "react-chartjs-2";
@@ -318,7 +318,6 @@ export const Form = ({ measurements }: { measurements: MeasurementType[] }) => {
             ))}
         </select>
       </div>
-
       <div className="w-full h-75">
         <Line redraw options={chartOptions} data={data} />
       </div>
