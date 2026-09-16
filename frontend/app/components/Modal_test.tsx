@@ -66,7 +66,7 @@ export const Modal = ({
   return (
     <div className="border border-zinc-200 p-5 rounded-xl shadow-xs">
       <div
-        className={`absolute inset-y-0 left-0 w-full backdrop-blur-xs border`}
+        className={`fixed inset-y-0 left-0 w-full bg-black/10 backdrop-blur-xs border`}
       >
         <dialog
           onClose={() => {
@@ -74,7 +74,7 @@ export const Modal = ({
           }}
           open={true}
           closedby="any"
-          className="fixed top-0 left-auto right-0 animate-show m-2 p-2 border border-zinc-200 rounded-xl shadow-xs max-w-md  md:w-full w-95"
+          className="fixed top-0 left-auto right-0 animate-show m-2 p-2 border border-zinc-200 rounded-xl shadow-xs max-w-md  md:w-full w-auto"
         >
           {sensorTemperatureLimits && (
             <div>
