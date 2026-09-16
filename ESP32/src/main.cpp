@@ -22,11 +22,9 @@ void saveMeasurements(TempAndHumidity measurements)
   HTTPClient HTTP;
   HTTP.begin(String(SERVER_URL) + "/measurement");
   HTTP.addHeader("Content-Type", "application/json");
-
   // Kellonaika
   time_t unixTime;
   time(&unixTime);
-
   // HTTP - post pyynnön body
   String body = "{\"temperature\":" + String(measurements.temperature, 1) +
                 ",\"humidity\":" + String(measurements.humidity, 1) +
@@ -34,8 +32,6 @@ void saveMeasurements(TempAndHumidity measurements)
                 ",\"sensorName\":\"" + String(CUSTOM_SENSOR_NAME) + "\"" +
                 ",\"timeStamp\":\"" + String(unixTime) + "\""
                                                          "}";
-  Serial.println(body);
-
   int statusCode = HTTP.POST(body);
   if (statusCode > 0)
   {

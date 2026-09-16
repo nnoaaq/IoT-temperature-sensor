@@ -2,7 +2,6 @@
 import { LimitType } from "../types/limit";
 
 const API_SERVER = process.env.API_URL;
-console.log("LÄYDETTY:", API_SERVER);
 export const getMeasurements = async () => {
   try {
     // haetaan mittaustulokset tietokannasta
@@ -41,14 +40,11 @@ export const saveTemperatureLimits = async (
   sensorId: string,
   temperatureLimits: LimitType,
 ) => {
-  console.log("STRING", sensorId);
-  console.log(temperatureLimits);
-  console.log("API", API_SERVER);
   const response = await fetch(`${API_SERVER}/sensor`, {
     method: "POST",
     body: JSON.stringify({
       sensorId: sensorId,
-      temperatureLimits,
+      ...temperatureLimits,
     }),
   });
   return response.ok;

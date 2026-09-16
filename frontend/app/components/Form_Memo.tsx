@@ -20,6 +20,8 @@ import {
 } from "../utils/time";
 import { getTemperatureLimits, updateTemperatureLimits } from "../lib/Api";
 import { SettingModal } from "./SettingModal";
+import { Modal } from "./Modal_test";
+import { LimitType } from "../types/limit";
 Chart.register(
   CategoryScale,
   LinearScale,
@@ -84,7 +86,9 @@ export const Form = ({ measurements }: { measurements: MeasurementType[] }) => {
   );
 
   // useState raja-arvoja varten
-  const [selectedSensorLimits, setSelectedSensorLimits] = useState({});
+  const [selectedSensorLimits, setSelectedSensorLimits] = useState<LimitType>(
+    {},
+  );
   // haetaan uudet raja-arvot, kun valittu sensori vaihtuu
   useEffect(() => {
     const fetchSensors = async (sensorId: string) => {
@@ -228,16 +232,19 @@ export const Form = ({ measurements }: { measurements: MeasurementType[] }) => {
       },
     },
   };
-  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showModal, setShowModal] = useState(false);
   return (
     <div className="flex flex-col gap-2">
-      {showSettingsModal && (
-        <SettingModal
-          closeModal={() => setShowSettingsModal(false)}
-          limits={selectedSensorLimits}
+      {showModal && (
+        <Modal
+          updateSensorTemperatureLimits={(temperatureLimits: LimitType) =>
+            setSelectedSensorLimits(temperatureLimits)
+          }
+          modalClose={() => setShowModal(false)}
+          modalTitle="Asetukset"
           sensorId={selectedSensor}
-          changeYLimits={(field: string, value: string) => {
-            console.log("OK");
+          temperatureLimits={selectedSensorLimits}
+          updateYLimits={(field: "min" | "max", value: string) => {
             setChartYLimits((prevLimits) => ({
               ...prevLimits,
               [field]: Number(value),
@@ -251,7 +258,7 @@ export const Form = ({ measurements }: { measurements: MeasurementType[] }) => {
         </h1>
         <span
           className="cursor-pointer hover:text-emerald-600"
-          onClick={(e) => setShowSettingsModal(!showSettingsModal)}
+          onClick={(e) => setShowModal(true)}
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -318,6 +325,7 @@ export const Form = ({ measurements }: { measurements: MeasurementType[] }) => {
       <div className="w-full  h-75">
         <Line options={chartOptionsHumidity} data={dataHumidity} />
       </div>
+      <div></div>
     </div>
   );
 };

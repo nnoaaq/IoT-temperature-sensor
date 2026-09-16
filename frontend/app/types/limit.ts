@@ -1,5 +1,5 @@
 export type LimitType = {
   sensorId?: string;
-  maxTemperature?: number;
-  minTemperature?: number;
+  maxTemperature?: string | number;
+  minTemperature?: string | number;
 };
