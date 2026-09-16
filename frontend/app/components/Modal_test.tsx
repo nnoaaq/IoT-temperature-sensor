@@ -41,6 +41,16 @@ export const Modal = ({
       });
     }
   }, [temperatureLimits]);
+  // kokonaan pois scrollaus kun modal auki
+  useEffect(() => {
+    // Estetään scrollaus kun komponentti latautuu / avautuu
+    document.body.style.overflow = "hidden";
+
+    // Palautetaan scrollaus kun komponentti poistuu (cleanup function)
+    return () => {
+      document.body.style.overflow = "unset";
+    };
+  }, []);
   // Tarkistetaan onko numeroita. KYLLÄ > tietokantaan
   const submitTemperatureLimits = async () => {
     // Varmennetaan onko numeroita
