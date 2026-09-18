@@ -13,10 +13,15 @@ export const convertUnixTimestampWithHoursAndMinutes = (timestamp: number) => {
   }
 };
 export const convertUnixTimestamp = (timestamp: number) => {
-  // palauttaa ajan dd/mm/yyyy muodossa
+  // palauttaa ajan dd.mm.yyyy muodossa
   try {
     const timeObj = new Date(Number(timestamp) * 1000);
-    return new Intl.DateTimeFormat("fi-FI").format(timeObj);
+    return new Intl.DateTimeFormat("fi-FI", {
+      timeZone: "Europe/Helsinki",
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    }).format(timeObj);
   } catch (error) {
     return "0";
   }

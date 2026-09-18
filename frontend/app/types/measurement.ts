@@ -1,4 +1,4 @@
-export type MeasurementType = {
+export type Measurement = {
   timeStamp: number;
   humidity: number;
   temperature: number;

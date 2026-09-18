@@ -5,6 +5,7 @@ import { ScanCommand } from "@aws-sdk/lib-dynamodb";
 
 const dynamodb = documentClient;
 const tableName = process.env.DYNAMODB_SENSORS_TABLE_NAME;
+
 // /sensors GET
 export const getAllSensors = async (
   event: APIGatewayProxyEventV2,
@@ -16,11 +17,20 @@ export const getAllSensors = async (
         TableName: tableName,
       }),
     );
+
     if (!output.Items)
       throw new CustomError(404, { message: "Sensoreita ei löytynyt" });
+
+    const formatted = output.Items.map((sensor) => ({
+      ...sensor,
+      measurementDates: sensor.measurementDates
+        ? Array.from(sensor.measurementDates)
+        : [],
+    }));
+
     return {
       statusCode: 200,
-      body: JSON.stringify(output.Items),
+      body: JSON.stringify(formatted),
     };
   } catch (error) {
     return handleError(error);

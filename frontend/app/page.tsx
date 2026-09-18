@@ -1,15 +1,19 @@
 import { LineChart } from "./components/Chart";
 import { getMeasurements, getSensors } from "./lib/Api";
-import { MeasurementType } from "./types/measurement";
-import { SensorType } from "./types/sensor";
+import { Measurement } from "./types/measurement";
+import { Sensor } from "./types/sensor";
 
 export default async function Home() {
-  const measurements: MeasurementType[] = await getMeasurements(null); // aina vähintään tyhjä taulukko
-  const sensors: SensorType[] = await getSensors();
+  const measurements: {
+    success: boolean;
+    sensorId: string;
+    measurements: Measurement[];
+  } = await getMeasurements(null); // ENSIMMÄINEN HAKU
+  const sensors: Sensor[] = await getSensors();
   return (
     <div className="flex flex-col  w-full ">
       <div className="border border-zinc-200 m-2 rounded-xl shadow-sm p-2">
-        <LineChart measurementsData={measurements} sensors={sensors} />
+        <LineChart sensors={sensors} data={measurements} />
       </div>
     </div>
   );

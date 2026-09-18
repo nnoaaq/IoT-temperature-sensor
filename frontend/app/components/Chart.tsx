@@ -11,8 +11,8 @@ import {
   Tooltip,
 } from "chart.js";
 import { Chart } from "chart.js";
-import { MeasurementType } from "../types/measurement";
-import { SensorType } from "../types/sensor";
+import { Measurement } from "../types/measurement";
+import { Sensor } from "../types/sensor";
 import { useEffect, useMemo, useState } from "react";
 import {
   convertUnixTimestamp,
@@ -30,61 +30,93 @@ Chart.register(
   Tooltip,
 );
 export const LineChart = ({
-  measurementsData,
   sensors,
+  data,
 }: {
-  measurementsData: MeasurementType[];
-  sensors: SensorType[];
+  data: { sensorId: string; measurements: Measurement[] };
+  sensors: Sensor[];
 }) => {
-  // MEASUREMENTS STATE
+  if (!data.sensorId)
+    return (
+      <div>
+        <p className="text-rose-500">Mittaustuloksia ei löytynyt</p>
+      </div>
+    );
 
-  const [measurements, setMeasurements] = useState(measurementsData);
-
-  // USEMEMO = LAJITELLAAN VAIN KERRAN SIVULLE TULLESSA
-  const { measurementsGroupedBySensor } = useMemo(() => {
-    // MITTAUSTULOKSET RYHMITELTYNÄ SENSOREITTAIN
-    // sensorId => [{measurementId, measurementData:{........}}]
-    const measurementsGroupedBySensorMap = new Map<string, MeasurementType[]>();
-    [...measurements]
-      .sort((a, b) => Number(a.timeStamp) - Number(b.timeStamp))
-      .forEach((measurement) => {
-        const { sensorId, sensorName } = measurement;
-
-        if (!measurementsGroupedBySensorMap.get(sensorId)) {
-          measurementsGroupedBySensorMap.set(sensorId, []);
-        }
-        measurementsGroupedBySensorMap.get(sensorId)?.push(measurement);
+  // MAPPI KAIKISTA SENSOREISTA
+  const sensorsMap = useMemo(() => {
+    const map = new Map<string, Sensor>();
+    sensors.forEach((sensor) => {
+      map.set(sensor.sensorId, {
+        ...sensor,
       });
-    return {
-      measurementsGroupedBySensor: measurementsGroupedBySensorMap,
-    };
-  }, [measurements]);
+    });
+    return map;
+  }, [sensors]);
 
-  // VALITUN SENSORIN KÄYTTÖ
-  // DEFAULT = ENSIMMÄINEN LÖYTYNYT SENSORI ID
-  const [selectedSensor, setSelectedSensor] = useState(sensors[0].sensorId);
+  // CACHED_MEASUREMENTS USESTATE >> EI TURHIA GET-PYYNTÖJÄ JOS HAETTU KERTAALLEEN MITTAUSTULOKSET
+  // sensorId : {measurements:[{}{}], measurementDates: Set []}
+  const [cachedMeasurements, setCachedMeasurements] = useState<
+    Map<string, { measurements: Measurement[]; measurementDates: Set<string> }>
+  >(() => {
+    const map = new Map();
+    if (data.sensorId) {
+      // MITTAUSTULOKSIA TULLUT ENSIMMÄISELLÄ RENDERÖINNILLÄ
+      // CACHETETAAN ENSIMMÄINEN SENSORI
+      const foundDays = new Set<string>();
+      data.measurements.forEach((measurement) => {
+        // MUUNNETAAN UNIX-AIKALEIMA DD.MM.YYYY MUOTOON
+        const measurementDate = convertUnixTimestamp(measurement.timeStamp);
+        foundDays.add(measurementDate);
+      });
+      map.set(data.sensorId, {
+        measurements: data.measurements,
+        measurementDates: foundDays,
+      });
+    }
+    return map;
+  });
+  // VALITUN SENSORIN USESTATE >> DEFAULT = ENSIMMÄINEN LÖYTYNYT SENSORI TIETOKANNASTA
+  const [selectedSensor, setSelectedSensor] = useState(data.sensorId || "");
 
+  // VALITTU SENSORI MUUTTUU >> HAETAAN UUDET TIEDOT
   useEffect(() => {
-    // HAETAAN UUDET TIEDOT UUDELLA SENSORILLA
-    const fetch = async () => {
-      const newMeasurements = await getMeasurements(selectedSensor);
-      setMeasurements(newMeasurements);
+    const fetchMeasurements = async () => {
+      if (!selectedSensor) return; // EI SENSORIDTÄ
+      if (cachedMeasurements.has(selectedSensor)) return; // TIEDOT ON JO
+      const newMeasurements: {
+        sensorId: string;
+        measurements: Measurement[];
+      } = await getMeasurements(selectedSensor);
+      setCachedMeasurements((prevMap) => {
+        const newMap = new Map(prevMap);
+        const foundDays = new Set<string>();
+        newMeasurements.measurements.forEach((measurement) => {
+          // MUUNNETAAN UNIX-AIKALEIMA DD.MM.YYYY MUOTOON
+          const measurementDate = convertUnixTimestamp(measurement.timeStamp);
+          foundDays.add(measurementDate);
+        });
+        newMap.set(newMeasurements.sensorId, {
+          measurements: newMeasurements.measurements,
+          measurementDates: foundDays,
+        });
+        return newMap;
+      });
     };
-    fetch();
+    fetchMeasurements();
   }, [selectedSensor]);
-  // VALITUN SENSORIN MITTAUSTULOSTEN PÄIVÄMÄÄRÄT
-  const sensorMeasuredDays = new Set<string>();
-  for (let measurement of measurementsGroupedBySensor.get(
-    selectedSensor as string,
-  ) || []) {
-    const { timeStamp } = measurement;
-    sensorMeasuredDays.add(convertUnixTimestamp(timeStamp));
-  }
 
-  // VALITUN PÄIVÄMÄÄRÄN KÄYTTÖ
-  // DEFAULT = KAIKKI PÄIVÄT (ALL)
+  // VALITUN PÄIVÄN USESTATE >> DEFAULT = KAIKKI PÄIVÄT
   const [selectedDay, setSelectedDay] = useState("all");
 
+  // MEASUREMENTS >> VALITUN SENSORIN KAIKKI MITTAUSTULOKSET
+  const measurements = cachedMeasurements.get(selectedSensor);
+  const filteredMeasurements =
+    measurements?.measurements.filter((measurement) => {
+      if (selectedDay == "all") return measurement; // PÄIVÄMÄÄRÄLLÄ EI MERKITYSTÄ
+      if (convertUnixTimestamp(measurement.timeStamp) != selectedDay) return; // PÄIVÄMÄÄRÄ EI VASTAA VALITTUA
+      return measurement;
+    }) || [];
   // Y-AKSELIN RAJA-ARVOT
   const [chartY, setChartY] = useState<{
     min: undefined | string;
@@ -128,29 +160,17 @@ export const LineChart = ({
         : "oklch(48.8% 0.243 264.376)";
     const label = field === "temperature" ? "Lämpötila °C" : "Kosteus %";
     return {
-      labels: measurementsGroupedBySensor
-        .get(selectedSensor as string)
-        ?.filter((measurement) => {
-          const { timeStamp } = measurement;
-          if (selectedDay == "all") return measurement;
-          if (convertUnixTimestamp(timeStamp) != selectedDay) return;
-          return measurement;
-        })
-        .map((measurement) =>
-          convertUnixTimestampWithHoursAndMinutes(measurement.timeStamp),
-        ),
+      labels: filteredMeasurements.map((measurement) => {
+        // YKSITTÄINEN MITTAUSTULOS
+        return convertUnixTimestampWithHoursAndMinutes(measurement.timeStamp);
+      }),
       datasets: [
         {
           label: label,
-          data: measurementsGroupedBySensor
-            .get(selectedSensor as string)
-            ?.filter((measurement) => {
-              const { timeStamp } = measurement;
-              if (selectedDay == "all") return measurement;
-              if (convertUnixTimestamp(timeStamp) != selectedDay) return;
-              return measurement;
-            })
-            .map((measurement) => measurement[field]),
+          data: filteredMeasurements.map((measurement) => {
+            // YKSITTÄINEN MITTAUSTULOS
+            return measurement[field]; // JOKO TEMPERATURE TAI HUMIDITY - RIIPPUEN KAAVIOSTA
+          }),
           borderColor: borderColor,
           backgroundColor: backgroundColor,
           tension: 0.5,
@@ -161,7 +181,6 @@ export const LineChart = ({
       ],
     };
   };
-
   // LÄMPÖTILAN RAJA-ARVOT
   const [temperatureLimits, setTemperatureLimits] = useState({
     minTemperature: "",
@@ -266,12 +285,14 @@ export const LineChart = ({
           className="p-2 w-full border border-zinc-300 rounded-md rounded-tl-none shadow-xs hover:border-amber-500 focus:border-amber-500 outline-none"
         >
           <option value="all">Kaikki päivät</option>
-          {sensorMeasuredDays &&
-            [...sensorMeasuredDays.values()].map((day, index) => (
-              <option key={index} value={day}>
-                {day}
-              </option>
-            ))}
+          {sensorsMap &&
+            sensorsMap
+              .get(selectedSensor as string)
+              ?.measurementDates.map((date) => (
+                <option key={date} value={date}>
+                  {date}
+                </option>
+              ))}
         </select>
       </div>
       <div className=" h-100 w-full">

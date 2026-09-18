@@ -6,6 +6,7 @@ import {
   PutCommand,
   QueryCommand,
   ScanCommand,
+  UpdateCommand,
 } from "@aws-sdk/lib-dynamodb";
 import { sendEmail } from "./email";
 import { Measurement } from "./types/measurement";
@@ -14,8 +15,23 @@ const dynamodb = documentClient;
 const tableName = process.env.DYNAMODB_TABLE_NAME;
 const sensorsTableName = process.env.DYNAMODB_SENSORS_TABLE_NAME;
 const limitsTableName = process.env.DYNAMODB_TABLE_NAME_LIMITS;
-
 const authorization_key = process.env.PRIVATE_KEY;
+
+export const convertUnixTimestamp = (timestamp: number) => {
+  // palauttaa ajan dd.mm.yyyy muodossa
+  try {
+    const timeObj = new Date(Number(timestamp) * 1000);
+    return new Intl.DateTimeFormat("fi-FI", {
+      timeZone: "Europe/Helsinki",
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    }).format(timeObj);
+  } catch (error) {
+    return "0";
+  }
+};
+
 // measurement/{sensorId} GET
 export const getMeasurementById = async (
   event: APIGatewayProxyEventV2,
@@ -61,7 +77,6 @@ export const createMeasurement = async (
   sensorName:string
   }
   */
-
   // VAADITAAN authorization header
   if (
     !event.headers?.authorization ||
@@ -76,12 +91,52 @@ export const createMeasurement = async (
 
   try {
     const data: Measurement = JSON.parse(event.body as string);
+
+    // MITTATULOKSET-TAULU
     await dynamodb.send(
       new PutCommand({
         TableName: tableName,
         Item: data,
       }),
     );
+
+    // SENSORIT-TAULU
+    // sensorId:string, sensorName:string, measurementDates:set<string>
+    await dynamodb.send(
+      new UpdateCommand({
+        TableName: sensorsTableName,
+        Key: {
+          sensorId: data.sensorId,
+        },
+        UpdateExpression:
+          "SET sensorName = :sensorName ADD measurementDates :date ",
+        ExpressionAttributeValues: {
+          ":date": new Set([convertUnixTimestamp(data.timeStamp)]),
+          ":sensorName": data.sensorName,
+        },
+      }),
+    );
+
+    // RAJA-ARVOJEN TARKISTUS
+    const limits = await dynamodb.send(
+      new GetCommand({
+        TableName: limitsTableName,
+        Key: {
+          sensorId: data.sensorId,
+        },
+      }),
+    );
+    if (limits.Item) {
+      // raja-arvot olemassa
+      const minLimit = limits.Item?.minTemperature;
+      const maxLimit = limits.Item?.maxTemperature;
+      if (data.temperature > maxLimit || data.temperature < minLimit) {
+        await sendEmail(
+          "HÄLYTYS",
+          `Lämpötila ${data.temperature} °C on raja-arvojen ${minLimit} °C - ${maxLimit} °C ulkopuolella. (${data.sensorName} #${data.sensorId})`,
+        );
+      }
+    }
     return {
       statusCode: 200,
       body: JSON.stringify({
@@ -89,6 +144,7 @@ export const createMeasurement = async (
       }),
     };
   } catch (error) {
+    console.log("..", error);
     return handleError(error);
   }
 };
@@ -98,14 +154,7 @@ export const getAllMeasurements = async (
   event: APIGatewayProxyEventV2,
 ): Promise<APIGatewayProxyResultV2> => {
   try {
-    // haetaan kaikki mittaustulokset annetulle sensorille
-    // aina taulukko []
-    //const output = await dynamodb.send(
-    //  new ScanCommand({
-    //    TableName: tableName,
-    //    Limit: 10,
-    //  }),
-    //);
+    // HAETAAN MITTAUSTULOKSET ANNETULLE SENSORILLE TAI HAETAAN SENSORS-TAULUSTA ENSIMMÄINEN SENSORI
     let sensorId = event.queryStringParameters?.sensorId;
     if (!sensorId) {
       // haetaan ensimmäinen löytynyt sensori
@@ -130,7 +179,6 @@ export const getAllMeasurements = async (
         ExpressionAttributeValues: {
           ":sensorId": sensorId,
         },
-        Limit: 100,
       }),
     );
     return {
@@ -138,7 +186,7 @@ export const getAllMeasurements = async (
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(output.Items),
+      body: JSON.stringify({ sensorId: sensorId, measurements: output.Items }),
     };
   } catch (error) {
     return handleError(error);
