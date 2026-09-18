@@ -3,10 +3,20 @@ import { LimitType } from "../types/limit";
 
 const API_SERVER = process.env.API_URL;
 const PRIVATE_KEY = process.env.PRIVATE_KEY;
-export const getMeasurements = async (sensorId: string) => {
+export const getSensors = async () => {
+  try {
+    const response = await fetch(`${API_SERVER}/sensors`);
+    if (!response.ok) return [];
+    return await response.json();
+  } catch (error) {
+    return [];
+  }
+};
+export const getMeasurements = async (sensorId: string | null) => {
   try {
     // haetaan mittaustulokset tietokannasta
-    const response = await fetch(`${API_SERVER}/measurements/${sensorId}`, {
+    const queryParams = sensorId ? `?sensorId=${sensorId}` : "";
+    const response = await fetch(`${API_SERVER}/measurements${queryParams}`, {
       cache: "no-cache",
     });
     if (!response.ok) return [];

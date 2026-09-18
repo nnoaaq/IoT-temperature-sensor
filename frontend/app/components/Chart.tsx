@@ -19,7 +19,7 @@ import {
   convertUnixTimestampWithHoursAndMinutes,
 } from "../utils/time";
 import { Modal } from "./SettingModal";
-import { getTemperatureLimits } from "../lib/Api";
+import { getMeasurements, getTemperatureLimits } from "../lib/Api";
 Chart.register(
   CategoryScale,
   LinearScale,
@@ -30,16 +30,18 @@ Chart.register(
   Tooltip,
 );
 export const LineChart = ({
-  measurements,
+  measurementsData,
+  sensors,
 }: {
-  measurements: MeasurementType[];
+  measurementsData: MeasurementType[];
+  sensors: SensorType[];
 }) => {
-  // USEMEMO = LAJITELLAAN VAIN KERRAN SIVULLE TULLESSA
-  const { sensors, measurementsGroupedBySensor } = useMemo(() => {
-    // SENSORIT (JOKAINEN LÖYTYNYT VAIN KERRAN)
-    // sensorId => {sensorId, sensorName}
-    const sensorsMap = new Map<string, SensorType>();
+  // MEASUREMENTS STATE
 
+  const [measurements, setMeasurements] = useState(measurementsData);
+
+  // USEMEMO = LAJITELLAAN VAIN KERRAN SIVULLE TULLESSA
+  const { measurementsGroupedBySensor } = useMemo(() => {
     // MITTAUSTULOKSET RYHMITELTYNÄ SENSOREITTAIN
     // sensorId => [{measurementId, measurementData:{........}}]
     const measurementsGroupedBySensorMap = new Map<string, MeasurementType[]>();
@@ -47,27 +49,29 @@ export const LineChart = ({
       .sort((a, b) => Number(a.timeStamp) - Number(b.timeStamp))
       .forEach((measurement) => {
         const { sensorId, sensorName } = measurement;
-        sensorsMap.set(sensorId, {
-          sensorId: sensorId,
-          sensorName: sensorName,
-        });
+
         if (!measurementsGroupedBySensorMap.get(sensorId)) {
           measurementsGroupedBySensorMap.set(sensorId, []);
         }
         measurementsGroupedBySensorMap.get(sensorId)?.push(measurement);
       });
     return {
-      sensors: sensorsMap,
       measurementsGroupedBySensor: measurementsGroupedBySensorMap,
     };
   }, [measurements]);
 
   // VALITUN SENSORIN KÄYTTÖ
   // DEFAULT = ENSIMMÄINEN LÖYTYNYT SENSORI ID
-  const [selectedSensor, setSelectedSensor] = useState(
-    sensors.keys().next().value,
-  );
+  const [selectedSensor, setSelectedSensor] = useState(sensors[0].sensorId);
 
+  useEffect(() => {
+    // HAETAAN UUDET TIEDOT UUDELLA SENSORILLA
+    const fetch = async () => {
+      const newMeasurements = await getMeasurements(selectedSensor);
+      setMeasurements(newMeasurements);
+    };
+    fetch();
+  }, [selectedSensor]);
   // VALITUN SENSORIN MITTAUSTULOSTEN PÄIVÄMÄÄRÄT
   const sensorMeasuredDays = new Set<string>();
   for (let measurement of measurementsGroupedBySensor.get(
@@ -169,7 +173,11 @@ export const LineChart = ({
     const fetchLimits = async () => {
       if (!selectedSensor) return;
       const response = await getTemperatureLimits(selectedSensor);
-      if (!response.success) return;
+      if (!response.success)
+        return setTemperatureLimits({
+          minTemperature: "",
+          maxTemperature: "",
+        });
       setTemperatureLimits(response.limits);
     };
     fetchLimits();

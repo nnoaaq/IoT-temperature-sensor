@@ -35,6 +35,16 @@ provider:
             - dynamodb:UpdateItem
             - dynamodb:DeleteItem
             - dynamodb:Scan
+            - dynamodb:Query
+          Resource:
+            - Fn::GetAtt: [SensorsTable, Arn]
+        - Effect: Allow
+          Action:
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+            - dynamodb:Scan
           Resource:
             - Fn::GetAtt: [TemperatureLimitsTable, Arn]
 
@@ -44,6 +54,7 @@ provider:
     EMAIL_ADDRESS: ${self:custom.EMAIL_ADDRESS}
     DYNAMODB_TABLE_NAME_LIMITS: ${self:custom.DYNAMODB_TABLE_NAME_TEMPERATURE}
     RESEND_API_KEY: ${env:RESEND_API_KEY}
+    DYNAMODB_SENSORS_TABLE_NAME: ${env:DYNAMODB_SENSORS_TABLE_NAME}
 
 custom:
   DYNAMODB_MEASUREMENTS_TABLE_NAME: ${env:DYNAMODB_MEASUREMENTS_TABLE_NAME}
@@ -85,7 +96,13 @@ functions:
     handler: measurement.getAllMeasurements
     events:
       - httpApi:
-          path: /measurements/{sensorId}
+          path: /measurements
+          method: get
+  getAllSensors:
+    handler: sensors.getAllSensors
+    events:
+      - httpApi:
+          path: /sensors
           method: get
 
 # MeasurementsTable
@@ -116,6 +133,17 @@ resources:
       Type: AWS::DynamoDB::Table
       Properties:
         TableName: ${env:DYNAMODB_LIMITS_TABLE_NAME}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: sensorId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: sensorId
+            KeyType: HASH
+    SensorsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${env:DYNAMODB_SENSORS_TABLE_NAME}
         BillingMode: PAY_PER_REQUEST
         AttributeDefinitions:
           - AttributeName: sensorId

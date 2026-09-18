@@ -12,7 +12,9 @@ import { Measurement } from "./types/measurement";
 
 const dynamodb = documentClient;
 const tableName = process.env.DYNAMODB_TABLE_NAME;
+const sensorsTableName = process.env.DYNAMODB_SENSORS_TABLE_NAME;
 const limitsTableName = process.env.DYNAMODB_TABLE_NAME_LIMITS;
+
 const authorization_key = process.env.PRIVATE_KEY;
 // measurement/{sensorId} GET
 export const getMeasurementById = async (
@@ -104,9 +106,23 @@ export const getAllMeasurements = async (
     //    Limit: 10,
     //  }),
     //);
-    const sensorId = event.pathParameters?.sensorId;
-    if (!sensorId)
-      throw new CustomError(400, { message: "SensorID vaaditaan." });
+    let sensorId = event.queryStringParameters?.sensorId;
+    if (!sensorId) {
+      // haetaan ensimmäinen löytynyt sensori
+      const output = await dynamodb.send(
+        new ScanCommand({
+          TableName: sensorsTableName,
+          ProjectionExpression: "sensorId",
+          Limit: 1,
+        }),
+      );
+      if (!output.Items)
+        return {
+          statusCode: 400,
+          body: JSON.stringify({ message: "Sensoreita ei löytynyt." }),
+        };
+      sensorId = output.Items[0]?.sensorId;
+    }
     const output = await dynamodb.send(
       new QueryCommand({
         TableName: tableName,
