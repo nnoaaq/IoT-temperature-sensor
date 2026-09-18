@@ -85,7 +85,7 @@ functions:
     handler: measurement.getAllMeasurements
     events:
       - httpApi:
-          path: /measurements
+          path: /measurements/{sensorId}
           method: get
 
 # MeasurementsTable

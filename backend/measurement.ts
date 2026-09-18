@@ -91,12 +91,12 @@ export const createMeasurement = async (
   }
 };
 
-// /measurements/ GET
+// /measurements/{sensorId} GET
 export const getAllMeasurements = async (
   event: APIGatewayProxyEventV2,
 ): Promise<APIGatewayProxyResultV2> => {
   try {
-    // haetaan kaikki mittaustulokset
+    // haetaan kaikki mittaustulokset annetulle sensorille
     // aina taulukko []
     //const output = await dynamodb.send(
     //  new ScanCommand({
@@ -104,17 +104,19 @@ export const getAllMeasurements = async (
     //    Limit: 10,
     //  }),
     //);
+    const sensorId = event.pathParameters?.sensorId;
+    if (!sensorId)
+      throw new CustomError(400, { message: "SensorID vaaditaan." });
     const output = await dynamodb.send(
       new QueryCommand({
         TableName: tableName,
         KeyConditionExpression: "sensorId = :sensorId",
         ExpressionAttributeValues: {
-          ":sensorId": "10:00:3B:BC:76:1C",
+          ":sensorId": sensorId,
         },
-        Limit: 10,
+        Limit: 100,
       }),
     );
-    console.log("---", output);
     return {
       statusCode: 200,
       headers: {
@@ -123,7 +125,6 @@ export const getAllMeasurements = async (
       body: JSON.stringify(output.Items),
     };
   } catch (error) {
-    console.log("VIRHE;:", error);
     return handleError(error);
   }
 };
