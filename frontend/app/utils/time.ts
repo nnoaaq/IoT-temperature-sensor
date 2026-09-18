@@ -1,4 +1,4 @@
-export const convertUnixTimestampWithHoursAndMinutes = (timestamp: string) => {
+export const convertUnixTimestampWithHoursAndMinutes = (timestamp: number) => {
   // palauttaa ajan dd/mm/yyyy muodossa
   try {
     const timeObj = new Date(Number(timestamp) * 1000);
@@ -12,7 +12,7 @@ export const convertUnixTimestampWithHoursAndMinutes = (timestamp: string) => {
     return "0";
   }
 };
-export const convertUnixTimestamp = (timestamp: string) => {
+export const convertUnixTimestamp = (timestamp: number) => {
   // palauttaa ajan dd/mm/yyyy muodossa
   try {
     const timeObj = new Date(Number(timestamp) * 1000);

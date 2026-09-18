@@ -44,13 +44,9 @@ export const LineChart = ({
     // sensorId => [{measurementId, measurementData:{........}}]
     const measurementsGroupedBySensorMap = new Map<string, MeasurementType[]>();
     [...measurements]
-      .sort(
-        (a, b) =>
-          Number(a.measurementData.timeStamp) -
-          Number(b.measurementData.timeStamp),
-      )
+      .sort((a, b) => Number(a.timeStamp) - Number(b.timeStamp))
       .forEach((measurement) => {
-        const { sensorId, sensorName } = measurement.measurementData;
+        const { sensorId, sensorName } = measurement;
         sensorsMap.set(sensorId, {
           sensorId: sensorId,
           sensorName: sensorName,
@@ -77,7 +73,7 @@ export const LineChart = ({
   for (let measurement of measurementsGroupedBySensor.get(
     selectedSensor as string,
   ) || []) {
-    const { timeStamp } = measurement.measurementData;
+    const { timeStamp } = measurement;
     sensorMeasuredDays.add(convertUnixTimestamp(timeStamp));
   }
 
@@ -131,15 +127,13 @@ export const LineChart = ({
       labels: measurementsGroupedBySensor
         .get(selectedSensor as string)
         ?.filter((measurement) => {
-          const { timeStamp } = measurement.measurementData;
+          const { timeStamp } = measurement;
           if (selectedDay == "all") return measurement;
           if (convertUnixTimestamp(timeStamp) != selectedDay) return;
           return measurement;
         })
         .map((measurement) =>
-          convertUnixTimestampWithHoursAndMinutes(
-            measurement.measurementData.timeStamp,
-          ),
+          convertUnixTimestampWithHoursAndMinutes(measurement.timeStamp),
         ),
       datasets: [
         {
@@ -147,12 +141,12 @@ export const LineChart = ({
           data: measurementsGroupedBySensor
             .get(selectedSensor as string)
             ?.filter((measurement) => {
-              const { timeStamp } = measurement.measurementData;
+              const { timeStamp } = measurement;
               if (selectedDay == "all") return measurement;
               if (convertUnixTimestamp(timeStamp) != selectedDay) return;
               return measurement;
             })
-            .map((measurement) => measurement.measurementData[field]),
+            .map((measurement) => measurement[field]),
           borderColor: borderColor,
           backgroundColor: backgroundColor,
           tension: 0.5,

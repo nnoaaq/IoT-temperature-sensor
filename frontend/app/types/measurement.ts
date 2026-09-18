@@ -1,10 +1,7 @@
 export type MeasurementType = {
-  measurementId: string;
-  measurementData: {
-    timeStamp: string;
-    humidity: number;
-    temperature: number;
-    sensorId: string;
-    sensorName: string;
-  };
+  timeStamp: number;
+  humidity: number;
+  temperature: number;
+  sensorId: string;
+  sensorName: string;
 };

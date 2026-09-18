@@ -25,8 +25,9 @@ provider:
             - dynamodb:UpdateItem
             - dynamodb:DeleteItem
             - dynamodb:Scan
+            - dynamodb:Query
           Resource:
-            - Fn::GetAtt: [Dynamotable, Arn]
+            - Fn::GetAtt: [MeasurementsTable, Arn]
         - Effect: Allow
           Action:
             - dynamodb:GetItem
@@ -35,19 +36,19 @@ provider:
             - dynamodb:DeleteItem
             - dynamodb:Scan
           Resource:
-            - Fn::GetAtt: [LimitTable, Arn]
+            - Fn::GetAtt: [TemperatureLimitsTable, Arn]
 
   environment:
     PRIVATE_KEY: ${env:PRIVATE_KEY}
-    DYNAMODB_TABLE_NAME: ${self:custom.DYNAMODB_TABLE_NAME}
+    DYNAMODB_TABLE_NAME: ${self:custom.DYNAMODB_MEASUREMENTS_TABLE_NAME}
     EMAIL_ADDRESS: ${self:custom.EMAIL_ADDRESS}
     DYNAMODB_TABLE_NAME_LIMITS: ${self:custom.DYNAMODB_TABLE_NAME_TEMPERATURE}
     RESEND_API_KEY: ${env:RESEND_API_KEY}
 
 custom:
-  DYNAMODB_TABLE_NAME: ${env:DYNAMODB_TABLE_NAME}
+  DYNAMODB_MEASUREMENTS_TABLE_NAME: ${env:DYNAMODB_MEASUREMENTS_TABLE_NAME}
   EMAIL_ADDRESS: ${env:EMAIL_ADDRESS}
-  DYNAMODB_TABLE_NAME_TEMPERATURE: ${env:DYNAMODB_TABLE_NAME_TEMPERATURE}
+  DYNAMODB_TABLE_NAME_TEMPERATURE: ${env:DYNAMODB_LIMITS_TABLE_NAME}
 
 functions:
   getLimitsBySensor:
@@ -87,27 +88,38 @@ functions:
           path: /measurements
           method: get
 
+# MeasurementsTable
+# sensorId = Partition key, "10:00:3A:BB:AS:1C" - MAC - osoite
+# timeStamp = Sort key, 1789718500 - UNIX - aikaleima
+
+# TemperatureLimitsTable
+# sensorId = Partition key, "10:00:3A:BB:AS:1C" - MAC - osoite
+
 resources:
   Resources:
-    Dynamotable:
+    MeasurementsTable:
       Type: AWS::DynamoDB::Table
       Properties:
-        TableName: ${self:custom.DYNAMODB_TABLE_NAME}
-        AttributeDefinitions:
-          - AttributeName: measurementId
-            AttributeType: S
-        KeySchema:
-          - AttributeName: measurementId
-            KeyType: HASH
+        TableName: ${env:DYNAMODB_MEASUREMENTS_TABLE_NAME}
         BillingMode: PAY_PER_REQUEST
-    LimitTable:
+        AttributeDefinitions:
+          - AttributeName: sensorId
+            AttributeType: S
+          - AttributeName: timeStamp
+            AttributeType: N
+        KeySchema:
+          - AttributeName: sensorId
+            KeyType: HASH
+          - AttributeName: timeStamp
+            KeyType: RANGE
+    TemperatureLimitsTable:
       Type: AWS::DynamoDB::Table
       Properties:
-        TableName: ${self:custom.DYNAMODB_TABLE_NAME_TEMPERATURE}
+        TableName: ${env:DYNAMODB_LIMITS_TABLE_NAME}
+        BillingMode: PAY_PER_REQUEST
         AttributeDefinitions:
           - AttributeName: sensorId
             AttributeType: S
         KeySchema:
           - AttributeName: sensorId
             KeyType: HASH
-        BillingMode: PAY_PER_REQUEST

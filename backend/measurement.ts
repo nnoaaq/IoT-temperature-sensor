@@ -1,13 +1,19 @@
 import { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from "aws-lambda";
 import { CustomError, handleError } from "./error";
 import { documentClient } from "./database";
-import { GetCommand, PutCommand, ScanCommand } from "@aws-sdk/lib-dynamodb";
+import {
+  GetCommand,
+  PutCommand,
+  QueryCommand,
+  ScanCommand,
+} from "@aws-sdk/lib-dynamodb";
 import { sendEmail } from "./email";
+import { Measurement } from "./types/measurement";
 
 const dynamodb = documentClient;
 const tableName = process.env.DYNAMODB_TABLE_NAME;
 const limitsTableName = process.env.DYNAMODB_TABLE_NAME_LIMITS;
-const privateKey = process.env.PRIVATE_KEY;
+const authorization_key = process.env.PRIVATE_KEY;
 // measurement/{sensorId} GET
 export const getMeasurementById = async (
   event: APIGatewayProxyEventV2,
@@ -44,56 +50,40 @@ export const getMeasurementById = async (
 export const createMeasurement = async (
   event: APIGatewayProxyEventV2,
 ): Promise<APIGatewayProxyResultV2> => {
-  // VAADITAAN OMA TOKENI
-  if (event.headers?.authorization !== privateKey)
+  /*
+  {
+  sensorId:string,
+  sensorName:number,
+  temperature:number,
+  humidity:number
+  sensorName:string
+  }
+  */
+
+  // VAADITAAN authorization header
+  if (
+    !event.headers?.authorization ||
+    event.headers.authorization != authorization_key
+  )
     return {
       statusCode: 401,
       body: JSON.stringify({
         message: "Et ole tervetullut.",
       }),
     };
+
   try {
-    // tallennetaan mittaustulos
-    // sensorId:string VAADITTU, loput kentät valinnaisia
-    const measurementId = crypto.randomUUID(); // satunnainen tunniste
-    const measurementData = JSON.parse(event.body as string);
-    if (!measurementData.sensorId)
-      throw new CustomError(404, { message: "Sensorin tunniste vaaditaan." });
-    // luodaan uusi mittaustulos
+    const data: Measurement = JSON.parse(event.body as string);
     await dynamodb.send(
       new PutCommand({
         TableName: tableName,
-        Item: {
-          measurementId: measurementId,
-          measurementData: measurementData,
-        },
+        Item: data,
       }),
     );
-    const sensorLimits = await dynamodb.send(
-      new GetCommand({
-        TableName: limitsTableName,
-        Key: {
-          sensorId: measurementData.sensorId,
-        },
-      }),
-    );
-    if (sensorLimits.Item) {
-      // raja-arvot olemassa
-      // lähetetään sähköposti JOS mittaustulos näiden ulkopuolella
-      const { maxTemperature, minTemperature } = sensorLimits.Item;
-      const { temperature } = measurementData;
-      if (temperature > maxTemperature || temperature < minTemperature) {
-        await sendEmail(
-          "Mittaus raja-arvojen ulkopuolella",
-          `<p>Sensorin ${measurementData.sensorName} (${measurementData.sensorId}) lämpötila ${measurementData.temperature} °C raja-arvojen ${minTemperature} °C - ${maxTemperature} °C ulkopuolella.</p>`,
-        );
-      }
-    }
     return {
-      statusCode: 201,
+      statusCode: 200,
       body: JSON.stringify({
-        measurementId: measurementId,
-        measurementData: measurementData,
+        message: "Mittaustulos tallennettu onnistuneesti.",
       }),
     };
   } catch (error) {
@@ -108,11 +98,23 @@ export const getAllMeasurements = async (
   try {
     // haetaan kaikki mittaustulokset
     // aina taulukko []
+    //const output = await dynamodb.send(
+    //  new ScanCommand({
+    //    TableName: tableName,
+    //    Limit: 10,
+    //  }),
+    //);
     const output = await dynamodb.send(
-      new ScanCommand({
+      new QueryCommand({
         TableName: tableName,
+        KeyConditionExpression: "sensorId = :sensorId",
+        ExpressionAttributeValues: {
+          ":sensorId": "10:00:3B:BC:76:1C",
+        },
+        Limit: 10,
       }),
     );
+    console.log("---", output);
     return {
       statusCode: 200,
       headers: {
@@ -121,6 +123,7 @@ export const getAllMeasurements = async (
       body: JSON.stringify(output.Items),
     };
   } catch (error) {
+    console.log("VIRHE;:", error);
     return handleError(error);
   }
 };

@@ -14,7 +14,7 @@ const char *PASSWORD = WIFI_PASSWORD;
 const char *SERVER_URL = BACKEND_SERVER_URL;
 const char *TIMEZONE_INFO = "EET-2EEST,M3.5.0/3,M10.5.0/4"; // Koodi Suomen ajalle
 const char *NTP_SERVER = "fi.pool.ntp.org";                 // NTP - palvelin
-const char *CUSTOM_SENSOR_NAME = "Keittiö";                 // Sensorin nimi (näkyy frontendissä)
+const char *CUSTOM_SENSOR_NAME = "Makuuhuone";              // Sensorin nimi (näkyy frontendissä)
 
 void saveMeasurements(TempAndHumidity measurements)
 {
@@ -32,8 +32,8 @@ void saveMeasurements(TempAndHumidity measurements)
                 ",\"humidity\":" + String(measurements.humidity, 1) +
                 ",\"sensorId\":\"" + String(WiFi.macAddress()) + "\"" +
                 ",\"sensorName\":\"" + String(CUSTOM_SENSOR_NAME) + "\"" +
-                ",\"timeStamp\":\"" + String(unixTime) + "\""
-                                                         "}";
+                ",\"timeStamp\":" + String(unixTime) + "}";
+  Serial.println(body);
   int statusCode = HTTP.POST(body);
   if (statusCode > 0)
   {
