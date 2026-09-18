@@ -22,9 +22,11 @@ void saveMeasurements(TempAndHumidity measurements)
   HTTPClient HTTP;
   HTTP.begin(String(SERVER_URL) + "/measurement");
   HTTP.addHeader("Content-Type", "application/json");
+  HTTP.addHeader("authorization", PRIVATE_KEY);
   // Kellonaika
   time_t unixTime;
   time(&unixTime);
+
   // HTTP - post pyynnön body
   String body = "{\"temperature\":" + String(measurements.temperature, 1) +
                 ",\"humidity\":" + String(measurements.humidity, 1) +

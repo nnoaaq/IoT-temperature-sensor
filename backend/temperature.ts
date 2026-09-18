@@ -5,7 +5,7 @@ import { GetCommand, PutCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
 
 const dynamodb = documentClient;
 const tableName = process.env.DYNAMODB_TABLE_NAME_LIMITS;
-
+const privateKey = process.env.PRIVATE_KEY;
 // /sensor/{sensorId} GET
 export const getLimitsBySensor = async (
   event: APIGatewayProxyEventV2,
@@ -42,6 +42,14 @@ export const getLimitsBySensor = async (
 export const createSensorLimits = async (
   event: APIGatewayProxyEventV2,
 ): Promise<APIGatewayProxyResultV2> => {
+  // VAADITAAN OMA TOKENI
+  if (event.headers?.authorization !== privateKey)
+    return {
+      statusCode: 401,
+      body: JSON.stringify({
+        message: "Et ole tervetullut.",
+      }),
+    };
   try {
     // sensorin raja-arvojen lisäys / päivitys
     // jos arvoja ei tallennettu > luodaan
@@ -51,14 +59,7 @@ export const createSensorLimits = async (
     const { sensorId, ...fields } = JSON.parse(event.body as string);
     if (!sensorId)
       throw new CustomError(404, { message: "Tarkista sensorin tunniste." });
-    console.log({
-      TableName: tableName,
-      Item: {
-        sensorId: sensorId,
-        ...fields,
-      },
-      ReturnValues: "ALL_NEW",
-    });
+
     await dynamodb.send(
       new PutCommand({
         TableName: tableName,
@@ -86,6 +87,14 @@ export const createSensorLimits = async (
 export const updateSensorLimits = async (
   event: APIGatewayProxyEventV2,
 ): Promise<APIGatewayProxyResultV2> => {
+  // VAADITAAN OMA TOKENI
+  if (event.headers?.authorization !== privateKey)
+    return {
+      statusCode: 401,
+      body: JSON.stringify({
+        message: "Et ole tervetullut.",
+      }),
+    };
   try {
     const sensorId = event.pathParameters?.sensorId;
     const body = JSON.parse(event.body as string);

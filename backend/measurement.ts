@@ -7,6 +7,7 @@ import { sendEmail } from "./email";
 const dynamodb = documentClient;
 const tableName = process.env.DYNAMODB_TABLE_NAME;
 const limitsTableName = process.env.DYNAMODB_TABLE_NAME_LIMITS;
+const privateKey = process.env.PRIVATE_KEY;
 // measurement/{sensorId} GET
 export const getMeasurementById = async (
   event: APIGatewayProxyEventV2,
@@ -43,6 +44,14 @@ export const getMeasurementById = async (
 export const createMeasurement = async (
   event: APIGatewayProxyEventV2,
 ): Promise<APIGatewayProxyResultV2> => {
+  // VAADITAAN OMA TOKENI
+  if (event.headers?.authorization !== privateKey)
+    return {
+      statusCode: 401,
+      body: JSON.stringify({
+        message: "Et ole tervetullut.",
+      }),
+    };
   try {
     // tallennetaan mittaustulos
     // sensorId:string VAADITTU, loput kentät valinnaisia

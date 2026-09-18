@@ -38,6 +38,7 @@ provider:
             - Fn::GetAtt: [LimitTable, Arn]
 
   environment:
+    PRIVATE_KEY: ${env:PRIVATE_KEY}
     DYNAMODB_TABLE_NAME: ${self:custom.DYNAMODB_TABLE_NAME}
     EMAIL_ADDRESS: ${self:custom.EMAIL_ADDRESS}
     DYNAMODB_TABLE_NAME_LIMITS: ${self:custom.DYNAMODB_TABLE_NAME_TEMPERATURE}
