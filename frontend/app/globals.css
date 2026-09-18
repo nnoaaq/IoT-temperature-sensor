@@ -1,15 +1,15 @@
 @import "tailwindcss";
-@keyframes slideDown {
+@keyframes openModal {
   from {
     opacity: 0;
-    transform: translateY(-50px) scale(0.95);
+    transform: translateY(-50px) translateX(50px) scale(0.95);
   }
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translateY(0) translateX(0) scale(1);
   }
 }
 
-.animate-show {
-  animation: slideDown 0.25s ease-out forwards;
+.modal-open {
+  animation: openModal 0.25s ease-out forwards;
 }
