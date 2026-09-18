@@ -19,7 +19,7 @@ export const Modal = ({
     minTemperature: string;
     maxTemperature: string;
   };
-  updateYLimits: (field: string, value: string) => void;
+  updateYLimits: (field: "max" | "min", value: string) => void;
 }) => {
   // LÄMPÖTILAN RAJA-ARVOT
   const [ModaltemperatureLimits, setModalTemperatureLimits] = useState({

@@ -182,11 +182,11 @@ export const LineChart = ({
   }, [selectedSensor]);
   return (
     <div className="relative">
-      <div className="">
+      <div>
         {isSettingsOpen && (
           <Modal
             temperatureLimits={temperatureLimits}
-            updateYLimits={(field: string, value: string) => {
+            updateYLimits={(field: "min" | "max", value: string) => {
               if (value.length === 0) {
                 return setChartY((prevLimits) => ({
                   ...prevLimits,
@@ -208,7 +208,7 @@ export const LineChart = ({
         <h1 className="text-amber-500 text-lg uppercase">Mittaustiedot</h1>
         <button
           onClick={() => setIsSettingsOpen(true)}
-          className="cursor-pointer hover:text-amber-500 transition-color focus:text-amber-500 outline-none"
+          className="cursor-pointer hover:text-amber-500 transition-colors focus:text-amber-500 outline-none"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -229,7 +229,7 @@ export const LineChart = ({
       <div>
         <label
           htmlFor="selectSensor"
-          className="block text-zinc-500 uppercase text-xs tracking-widest translate-x-1 translate-y-2 bg-zinc-50 w-fit"
+          className="block text-zinc-500 uppercase text-xs tracking-widest translate-x-1 translate-y-2 bg-white w-fit"
         >
           Valitse näytettävä sensori
         </label>
@@ -253,7 +253,7 @@ export const LineChart = ({
       <div>
         <label
           htmlFor="selectDay"
-          className="block text-zinc-500 uppercase text-xs tracking-widest translate-x-1 translate-y-2 bg-zinc-50 w-fit"
+          className="block text-zinc-500 uppercase text-xs tracking-widest translate-x-1 translate-y-2 bg-white w-fit"
         >
           Valitse näytettävä päivä
         </label>
