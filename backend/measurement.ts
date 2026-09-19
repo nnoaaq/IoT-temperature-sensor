@@ -156,7 +156,7 @@ export const createMeasurement = async (
   }
 };
 
-// /measurements/{sensorId} GET
+// /measurements GET
 export const getAllMeasurements = async (
   event: APIGatewayProxyEventV2,
 ): Promise<APIGatewayProxyResultV2> => {

@@ -9,8 +9,8 @@ import {
 } from "../utils/time";
 import {
   getMeasurements,
-  getMeasurementsBySensor,
-  getTemperatureLimits,
+  getMeasurementsFromDay,
+  getSensorTemperatureLimits,
   saveTemperatureLimits,
 } from "../lib/Api";
 import { Line } from "react-chartjs-2";
@@ -121,11 +121,18 @@ export const Chart2 = ({
         measurementsCache.get(selectedSensor)?.temperatureLimits
       )
         return; // TIEDOT ON JO TALLENNETTU CACHEEN
-      const fetchedLimits = await getTemperatureLimits(selectedSensor);
+      const fetchedLimits = await getSensorTemperatureLimits(selectedSensor);
+
       const fetchedMeasurements: {
         sensorId: string;
         measurements: Measurement[];
       } = await getMeasurements(selectedSensor);
+      if (
+        !fetchedMeasurements ||
+        !fetchedMeasurements.measurements ||
+        !fetchedMeasurements.sensorId
+      )
+        return;
       setMeasurementsCache((previouslyCachedMeasurements) => {
         const map = new Map(previouslyCachedMeasurements);
         const set = new Set<string>();
@@ -135,7 +142,7 @@ export const Chart2 = ({
         map.set(fetchedMeasurements.sensorId, {
           measurements: fetchedMeasurements.measurements,
           measuredDays: set,
-          temperatureLimits: fetchedLimits,
+          temperatureLimits: fetchedLimits || {},
         });
         return map;
       });
@@ -150,7 +157,6 @@ export const Chart2 = ({
         .get(selectedSensor)
         ?.measuredDays.has(selectedDay);
       if (alreadyInCache) return; // LÖYTYI CACHESTA
-
       const [day, month, year] = selectedDay.split(".");
       const startTime = Math.floor(
         new Date(
@@ -163,11 +169,17 @@ export const Chart2 = ({
         ).getTime() / 1000,
       );
       const endTime = startTime + 24 * 60 * 60;
-      const fetchedMeasurements: Measurement[] = await getMeasurementsBySensor(
+      const fetchedMeasurements = await getMeasurementsFromDay(
         selectedSensor,
         startTime,
         endTime,
       );
+      if (
+        !fetchedMeasurements ||
+        !fetchedMeasurements.measurements ||
+        !fetchedMeasurements.sensorId
+      )
+        return;
       setMeasurementsCache((previouslyCachedMeasurements) => {
         const map = new Map(previouslyCachedMeasurements);
         const alreadyInCache = map.get(selectedSensor);
@@ -175,7 +187,7 @@ export const Chart2 = ({
           map.set(selectedSensor, {
             measurements: [
               ...alreadyInCache.measurements,
-              ...fetchedMeasurements,
+              ...fetchedMeasurements.measurements,
             ],
             measuredDays: new Set([
               ...alreadyInCache.measuredDays,
@@ -256,7 +268,11 @@ export const Chart2 = ({
       {showModal && (
         <Modal
           editTemperatureLimits={async (limits: LimitType) => {
-            await saveTemperatureLimits(selectedSensor, limits);
+            console.log(limits);
+            await saveTemperatureLimits(selectedSensor, {
+              maxTemperature: limits.maxTemperature as string,
+              minTemperature: limits.minTemperature as string,
+            });
             setMeasurementsCache((previouslyCachedMeasurements) => {
               const map = new Map(previouslyCachedMeasurements);
               const alreadyInCache = map.get(selectedSensor);

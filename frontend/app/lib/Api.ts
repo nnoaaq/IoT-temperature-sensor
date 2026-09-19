@@ -1,91 +1,97 @@
 "use server";
-import { LimitType } from "../types/limit";
 
-const API_SERVER = process.env.API_URL;
 const PRIVATE_KEY = process.env.PRIVATE_KEY;
-
 const API_URL = process.env.API_URL;
-export const getSensors = async () => {
-  try {
-    const response = await fetch(`${API_SERVER}/sensors`);
-    if (!response.ok) return [];
-    return await response.json();
-  } catch (error) {
-    return [];
-  }
-};
 
-export const getTemperatureLimits = async (sensorId: string) => {
-  try {
-    // haetaan raja-arvot tietokannasta
-    const response = await fetch(`${API_SERVER}/sensor/${sensorId}`);
-    if (!response.ok) return {};
-    return {
-      ...(await response.json()),
-    };
-  } catch (error) {
-    return {};
-  }
-};
-export const updateTemperatureLimits = async (
-  sensorId: string,
-  temperatureLimits: LimitType,
-) => {
-  // päivitetään raja-arvot
-  const API_SERVER = process.env.API_URL || "";
-  await fetch(`${API_SERVER}/sensor/${sensorId}`, {
-    method: "PUT",
-    body: JSON.stringify(temperatureLimits),
-  });
-};
-export const saveTemperatureLimits = async (
-  sensorId: string,
-  temperatureLimits: LimitType,
-) => {
-  if (!PRIVATE_KEY) return;
-  const response = await fetch(`${API_SERVER}/sensor`, {
-    method: "POST",
-    headers: {
-      authorization: PRIVATE_KEY,
-    },
-    body: JSON.stringify({
-      sensorId: sensorId,
-      ...temperatureLimits,
-    }),
-  });
-  return response.ok;
-};
-
+// _____ /measurements _____
+// GET (getAllMeasurements - BACKEND)
 export const getMeasurements = async (sensorId: string | null) => {
-  // HAETAAN MITTAUSTULOKSET TIETOKANNASTA
-  // sensorId = AA:BB:CC:DD:EE:FF || null
-
-  const searchQueryParameters = sensorId ? `?sensorId=${sensorId}` : "";
-
+  // ?sensorId = sensorId:string | null
+  // null > ensimmäinen haku sivulle tultaessa (sensori-taulusta ensimmäinen id backendin toimesta)
+  // PALAUTTAA {sensorId:string, measurements: Measurement[]}
+  if (!API_URL) return {};
   try {
-    const response = await fetch(
+    const searchQueryParameters = sensorId ? `?sensorId=${sensorId}` : "";
+    const foundMeasurements = await fetch(
       `${API_URL}/measurements${searchQueryParameters}`,
     );
-    if (!response.ok) return { sensorId: null };
-    return { ...(await response.json()) };
+    if (!foundMeasurements.ok) return null;
+    return await foundMeasurements.json();
   } catch (error) {
-    return { sensorId: null };
+    return null;
   }
 };
 
-export const getMeasurementsBySensor = async (
+// _____ /measurement/sensorId _____
+// GET (getMeasurementsBySensorId - BACKEND)
+export const getMeasurementsFromDay = async (
   sensorId: string,
   startTime: number,
   endTime: number,
 ) => {
+  // PALAUTTAA {sensorId:string, measurements: Measurement[]}
+  if (!API_URL || !sensorId || !startTime || !endTime) return {};
   try {
-    const response = await fetch(
+    const foundMeasurements = await fetch(
       `${API_URL}/measurements/${sensorId}?startTime=${startTime}&endTime=${endTime}`,
     );
-
-    if (!response.ok) return { sensorId: null };
-    return await response.json();
+    if (!foundMeasurements.ok) return null;
+    return {
+      sensorId: sensorId,
+      measurements: await foundMeasurements.json(),
+    };
   } catch (error) {
-    return { sensorId: null };
+    return null;
+  }
+};
+
+// _____ /sensor _____
+// POST (createSensorLimits - BACKEND)
+export const saveTemperatureLimits = async (
+  sensorId: string,
+  limits: { maxTemperature: string; minTemperature: string },
+) => {
+  if (!PRIVATE_KEY || !sensorId || !limits) return null;
+  // {sensorId, maxTemperature, minTemperature}
+  try {
+    await fetch(`${API_URL}/sensor`, {
+      method: "POST",
+      headers: {
+        authorization: PRIVATE_KEY,
+      },
+      body: JSON.stringify({
+        sensorId: sensorId,
+        ...limits,
+      }),
+    });
+    return true;
+  } catch (error) {
+    return null;
+  }
+};
+
+// _____ /sensor/sensorId _____
+// GET (getLimitsBySensor - BACKEND)
+export const getSensorTemperatureLimits = async (sensorId: string) => {
+  if (!API_URL || !sensorId) return null;
+  try {
+    const foundLimits = await fetch(`${API_URL}/sensor/${sensorId}`);
+    if (!foundLimits.ok) return null;
+    return await foundLimits.json();
+  } catch (error) {
+    return null;
+  }
+};
+
+// _____ /sensors _____
+// GET (getAllSensors - BACKEND)
+export const getSensors = async () => {
+  if (!API_URL) return null;
+  try {
+    const foundSensors = await fetch(`${API_URL}/sensors`);
+    if (!foundSensors.ok) return null;
+    return await foundSensors.json();
+  } catch (error) {
+    return null;
   }
 };
