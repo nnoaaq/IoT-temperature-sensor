@@ -32,33 +32,40 @@ export const convertUnixTimestamp = (timestamp: number) => {
   }
 };
 
-// measurement/{sensorId} GET
-export const getMeasurementById = async (
+// measurements/{sensorId} GET
+export const getMeasurementsBySensorId = async (
   event: APIGatewayProxyEventV2,
 ): Promise<APIGatewayProxyResultV2> => {
   try {
-    // haetaan mittaustulokset valitulla measurementIdllä
-    // measurementId:string
-    const measurementId = event.pathParameters?.measurementId;
-    if (!measurementId)
+    // HAETAAN MITTAUSTULOKSET ANNETULLE SENSORILLE
+    // MITTAUSAIKA OLTAVA STARTIME & ENDTIME VÄLISSÄ (UNIX-TIMESTAMP)
+    const sensorId = event.pathParameters?.sensorId;
+    const { startTime, endTime } = event.queryStringParameters || {};
+    if (!startTime || !endTime)
+      throw new CustomError(400, { message: "Annettava startTime ja endTime" });
+    if (!sensorId)
       throw new CustomError(404, {
-        message: "Tarkista mittaustuloksen tunniste.",
+        message: "Tarkista Sensorin tunniste.",
       });
-    if (!tableName)
-      throw new CustomError(404, { message: "Tarkista ympäristömuuttujat." });
     const output = await dynamodb.send(
-      new GetCommand({
+      new QueryCommand({
         TableName: tableName,
-        Key: {
-          measurementId: measurementId,
+        KeyConditionExpression:
+          "sensorId = :sensorId AND #ts BETWEEN :startTime AND :endTime",
+        ExpressionAttributeNames: {
+          "#ts": "timeStamp",
         },
+        ExpressionAttributeValues: {
+          ":sensorId": sensorId,
+          ":startTime": Number(startTime),
+          ":endTime": Number(endTime),
+        },
+        ScanIndexForward: false,
       }),
     );
-    if (!output.Item)
-      throw new CustomError(404, { message: "Mittaustulosta ei löytynyt." });
     return {
       statusCode: 200,
-      body: JSON.stringify(output.Item),
+      body: JSON.stringify(output.Items),
     };
   } catch (error) {
     return handleError(error);
@@ -154,8 +161,11 @@ export const getAllMeasurements = async (
   event: APIGatewayProxyEventV2,
 ): Promise<APIGatewayProxyResultV2> => {
   try {
-    // HAETAAN MITTAUSTULOKSET ANNETULLE SENSORILLE TAI HAETAAN SENSORS-TAULUSTA ENSIMMÄINEN SENSORI
+    // HAETAAN MITTAUSTULOKSET ANNETULLE SENSORILLE
+    // TAI HAETAAN SENSORS-TAULUSTA ENSIMMÄINEN SENSORI
     let sensorId = event.queryStringParameters?.sensorId;
+    let date = event.queryStringParameters?.date;
+    let timestamp;
     if (!sensorId) {
       // haetaan ensimmäinen löytynyt sensori
       const output = await dynamodb.send(
@@ -172,12 +182,24 @@ export const getAllMeasurements = async (
         };
       sensorId = output.Items[0]?.sensorId;
     }
+
+    if (!date) {
+      // HAETAAN DEFAULTTINA VIIMEISET 7 PÄIVÄÄ
+      const daysInSeconds = 7 * (60 * 60 * 24); // 604 800
+      const currentTimeInSeconds = Math.floor(Date.now() / 1000);
+      timestamp = currentTimeInSeconds - daysInSeconds;
+    }
+
     const output = await dynamodb.send(
       new QueryCommand({
         TableName: tableName,
-        KeyConditionExpression: "sensorId = :sensorId",
+        KeyConditionExpression: "sensorId = :sensorId AND #ts >= :timeStamp",
+        ExpressionAttributeNames: {
+          "#ts": "timeStamp",
+        },
         ExpressionAttributeValues: {
           ":sensorId": sensorId,
+          ":timeStamp": timestamp,
         },
       }),
     );
@@ -189,6 +211,7 @@ export const getAllMeasurements = async (
       body: JSON.stringify({ sensorId: sensorId, measurements: output.Items }),
     };
   } catch (error) {
+    console.log(".-.", error);
     return handleError(error);
   }
 };

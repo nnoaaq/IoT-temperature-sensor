@@ -19,7 +19,11 @@ import {
   convertUnixTimestampWithHoursAndMinutes,
 } from "../utils/time";
 import { Modal } from "./SettingModal";
-import { getMeasurements, getTemperatureLimits } from "../lib/Api";
+import {
+  getMeasurements,
+  getMeasurementsBySensor,
+  getTemperatureLimits,
+} from "../lib/Api";
 Chart.register(
   CategoryScale,
   LinearScale,
@@ -108,6 +112,44 @@ export const LineChart = ({
 
   // VALITUN PÄIVÄN USESTATE >> DEFAULT = KAIKKI PÄIVÄT
   const [selectedDay, setSelectedDay] = useState("all");
+
+  useEffect(() => {
+    const fetch = async () => {
+      if (!selectedDay || !selectedSensor || selectedDay == "all") return;
+      if (
+        cachedMeasurements
+          .get(selectedSensor)
+          ?.measurementDates.has(selectedDay)
+      ) {
+        return;
+      } // HAETAAN SE!!
+      const [day, month, year] = selectedDay.split(".");
+      console.log("pitäisi hakea lisää:", selectedDay);
+      const startTime = Math.floor(
+        new Date(
+          Number(year),
+          Number(month) - 1,
+          Number(day),
+          0,
+          0,
+          0,
+        ).getTime() / 1000,
+      );
+
+      const endTime = startTime + 24 * 60 * 60;
+      const newMeasurements: { [key: number]: Measurement } =
+        await getMeasurementsBySensor(selectedSensor, startTime, endTime);
+      setCachedMeasurements((prevMap) => {
+        const newMap = new Map(prevMap);
+        newMap
+          .get(selectedSensor)
+          ?.measurements.push(...Object.values(newMeasurements));
+        newMap.get(selectedSensor)?.measurementDates.add(selectedDay);
+        return newMap;
+      });
+    };
+    fetch();
+  }, [selectedDay, selectedSensor]);
 
   // MEASUREMENTS >> VALITUN SENSORIN KAIKKI MITTAUSTULOKSET
   const measurements = cachedMeasurements.get(selectedSensor);

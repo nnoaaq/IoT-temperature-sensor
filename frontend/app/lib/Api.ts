@@ -73,3 +73,19 @@ export const getMeasurements = async (sensorId: string | null) => {
     return { sensorId: null };
   }
 };
+
+export const getMeasurementsBySensor = async (
+  sensorId: string,
+  startTime: number,
+  endTime: number,
+) => {
+  try {
+    const response = await fetch(
+      `${API_URL}/measurements/${sensorId}?startTime=${startTime}&endTime=${endTime}`,
+    );
+    if (!response.ok) return { sensorId: null };
+    return { ...(await response.json()) };
+  } catch (error) {
+    return { sensorId: null };
+  }
+};

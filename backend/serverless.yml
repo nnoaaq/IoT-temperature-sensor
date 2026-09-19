@@ -80,11 +80,11 @@ functions:
       - httpApi:
           path: /sensor/{sensorId}
           method: put
-  getMeasurementById:
-    handler: measurement.getMeasurementById
+  getMeasurementsBySensorId:
+    handler: measurement.getMeasurementsBySensorId
     events:
       - httpApi:
-          path: /measurement/{measurementId}
+          path: /measurements/{sensorId}
           method: get
   createMeasurement:
     handler: measurement.createMeasurement
