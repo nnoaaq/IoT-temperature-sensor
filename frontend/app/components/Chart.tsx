@@ -255,7 +255,7 @@ export const Chart2 = ({
     <div className="relative">
       {showModal && (
         <Modal
-          updateTemperatureLimits={async (limits: LimitType) => {
+          editTemperatureLimits={async (limits: LimitType) => {
             await saveTemperatureLimits(selectedSensor, limits);
             setMeasurementsCache((previouslyCachedMeasurements) => {
               const map = new Map(previouslyCachedMeasurements);

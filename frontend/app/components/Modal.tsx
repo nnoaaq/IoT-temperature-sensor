@@ -7,13 +7,13 @@ export const Modal = ({
   chartY,
   changeChartY,
   temperatureLimits,
-  updateTemperatureLimits,
+  editTemperatureLimits,
 }: {
   onClose: () => void;
   chartY: { min: number | undefined; max: number | undefined };
   changeChartY: (field: "min" | "max", value: string) => void;
   temperatureLimits: LimitType;
-  updateTemperatureLimits: (limits: LimitType) => void;
+  editTemperatureLimits: (limits: LimitType) => void;
 }) => {
   const [tempLimits, setTempLimits] = useState({
     maxTemperature: temperatureLimits.maxTemperature ?? "",
@@ -97,7 +97,7 @@ export const Modal = ({
               />
             </div>
             <button
-              onClick={() => updateTemperatureLimits(tempLimits)}
+              onClick={() => editTemperatureLimits(tempLimits)}
               className="mt-2 cursor-pointer hover:text-emerald-800 transition-colors outline-none focus:text-emerald-800 focus:ring-2 focus:ring-emerald-800"
             >
               <svg

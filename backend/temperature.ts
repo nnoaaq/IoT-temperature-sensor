@@ -77,7 +77,6 @@ export const createSensorLimits = async (
       }),
     };
   } catch (error) {
-    console.log("VIRHE", error);
     return handleError(error);
   }
 };
