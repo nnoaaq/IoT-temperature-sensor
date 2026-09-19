@@ -19,10 +19,9 @@ export const getTemperatureLimits = async (sensorId: string) => {
   try {
     // haetaan raja-arvot tietokannasta
     const response = await fetch(`${API_SERVER}/sensor/${sensorId}`);
-    if (!response.ok) return { success: false };
+    if (!response.ok) return {};
     return {
-      success: true,
-      limits: await response.json(),
+      ...(await response.json()),
     };
   } catch (error) {
     return {};

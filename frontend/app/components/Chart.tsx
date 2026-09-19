@@ -1,130 +1,157 @@
 "use client";
 
-import { Line } from "react-chartjs-2";
-import {
-  CategoryScale,
-  Legend,
-  LinearScale,
-  LineElement,
-  PointElement,
-  Title,
-  Tooltip,
-} from "chart.js";
-import { Chart } from "chart.js";
+import { useEffect, useMemo, useState } from "react";
 import { Measurement } from "../types/measurement";
 import { Sensor } from "../types/sensor";
-import { useEffect, useMemo, useState } from "react";
 import {
   convertUnixTimestamp,
   convertUnixTimestampWithHoursAndMinutes,
 } from "../utils/time";
-import { Modal } from "./SettingModal";
 import {
   getMeasurements,
   getMeasurementsBySensor,
   getTemperatureLimits,
+  saveTemperatureLimits,
 } from "../lib/Api";
+import { Line } from "react-chartjs-2";
+import {
+  CategoryScale,
+  Chart,
+  Legend,
+  LinearScale,
+  LineElement,
+  PointElement,
+  Tooltip,
+} from "chart.js";
+import { Modal } from "./Modal";
+import { LimitType } from "../types/limit";
 Chart.register(
   CategoryScale,
   LinearScale,
   PointElement,
   LineElement,
-  Title,
   Legend,
   Tooltip,
 );
-export const LineChart = ({
-  sensors,
+export const Chart2 = ({
+  sensorsData,
   data,
 }: {
-  data: { sensorId: string; measurements: Measurement[] };
-  sensors: Sensor[];
+  sensorsData: Sensor[];
+  data: {
+    sensorId: string;
+    measurements: Measurement[];
+  };
 }) => {
-  if (!data.sensorId)
-    return (
-      <div>
-        <p className="text-rose-500">Mittaustuloksia ei löytynyt</p>
-      </div>
-    );
-
-  // MAPPI KAIKISTA SENSOREISTA
-  const sensorsMap = useMemo(() => {
-    const map = new Map<string, Sensor>();
-    sensors.forEach((sensor) => {
+  // MAP SENSOREILLE
+  const sensors = useMemo(() => {
+    const map = new Map<
+      string,
+      {
+        sensorId: string;
+        sensorName: string;
+        measuredDays: string[];
+      }
+    >();
+    sensorsData.forEach((sensor) => {
       map.set(sensor.sensorId, {
-        ...sensor,
+        sensorId: sensor.sensorId,
+        sensorName: sensor.sensorName,
+        measuredDays: sensor.measurementDates,
       });
     });
     return map;
-  }, [sensors]);
+  }, []);
 
-  // CACHED_MEASUREMENTS USESTATE >> EI TURHIA GET-PYYNTÖJÄ JOS HAETTU KERTAALLEEN MITTAUSTULOKSET
-  // sensorId : {measurements:[{}{}], measurementDates: Set []}
-  const [cachedMeasurements, setCachedMeasurements] = useState<
-    Map<string, { measurements: Measurement[]; measurementDates: Set<string> }>
+  // USE STATE CACHETETYILLE MITTAUSTULOKSILLE _____ DEFAULTTINA LISÄTÄÄN ENSIMMÄINEN DATA (SENSORS-TAULUN ENSIMMÄINEN LÖYTYNYT SENSORID)
+  const [measurementsCache, setMeasurementsCache] = useState<
+    Map<
+      string,
+      {
+        temperatureLimits: LimitType;
+        measurements: Measurement[];
+        measuredDays: Set<string>;
+      }
+    >
   >(() => {
     const map = new Map();
-    if (data.sensorId) {
-      // MITTAUSTULOKSIA TULLUT ENSIMMÄISELLÄ RENDERÖINNILLÄ
-      // CACHETETAAN ENSIMMÄINEN SENSORI
-      const foundDays = new Set<string>();
-      data.measurements.forEach((measurement) => {
-        // MUUNNETAAN UNIX-AIKALEIMA DD.MM.YYYY MUOTOON
-        const measurementDate = convertUnixTimestamp(measurement.timeStamp);
-        foundDays.add(measurementDate);
-      });
-      map.set(data.sensorId, {
-        measurements: data.measurements,
-        measurementDates: foundDays,
-      });
-    }
+    if (data.measurements.length === 0) return map; // EI TULLUTKAAN DATAA - TYHJÄ MAP
+    const set = new Set();
+    data.measurements.forEach((measurement) => {
+      set.add(convertUnixTimestamp(measurement.timeStamp));
+    });
+    map.set(data.sensorId, {
+      measurements: data.measurements,
+      measuredDays: set,
+    });
     return map;
   });
-  // VALITUN SENSORIN USESTATE >> DEFAULT = ENSIMMÄINEN LÖYTYNYT SENSORI TIETOKANNASTA
-  const [selectedSensor, setSelectedSensor] = useState(data.sensorId || "");
 
-  // VALITTU SENSORI MUUTTUU >> HAETAAN UUDET TIEDOT
+  // USE STATE VALITULLE SENSORILLE _____ DEFAULT ENSIMMÄINEN LÖYTYNYT SENSORI CACHESTA
+  const [selectedSensor, setSelectedSensor] = useState<string>(
+    measurementsCache.entries().next().value?.[0] || "",
+  );
+
+  // USE STATE VALITULLE PÄIVÄLLE _____ DEFAULT "ALL" - KAIKKI PÄIVÄT
+  const [selectedDay, setSelectedDay] = useState<string>("all");
+
+  // USE STATE MODAALIN NÄKYVYYDELLE
+  const [showModal, setShowModal] = useState(false);
+
+  const filteredMeasurements = measurementsCache
+    .get(selectedSensor)
+    ?.measurements.filter((measurement) => {
+      // SUODATETAAN YKSITTÄINEN HAKUTULOS
+      if (selectedDay == "all") return measurement; // PÄIVÄLLÄ EI OLE VÄLIÄ
+      if (selectedDay == convertUnixTimestamp(measurement.timeStamp))
+        return measurement; // PÄIVÄ ON OIKEA
+    })
+    .sort((a, b) => Number(a.timeStamp) - Number(b.timeStamp));
+  const temperatureLimits =
+    measurementsCache.get(selectedSensor)?.temperatureLimits;
+  // __________TARVITTAVAT MUUTTUJAT ESITELTY____________
+
+  // TARKISTETAAN CACHE, KUN VALITTU SENSORI VAIHTUU (VIIMEISET 7 PÄIVÄÄ HAKEE)
   useEffect(() => {
-    const fetchMeasurements = async () => {
-      if (!selectedSensor) return; // EI SENSORIDTÄ
-      if (cachedMeasurements.has(selectedSensor)) return; // TIEDOT ON JO
-      const newMeasurements: {
+    const fetch = async () => {
+      if (!selectedDay || !selectedSensor) return; // EI OLE MILLÄ HAKEA
+      if (measurementsCache.get(selectedSensor)?.temperatureLimits) return; // RAJA-ARVOT ON JO TALLENNETTU
+      if (
+        measurementsCache.get(selectedSensor)?.measurements &&
+        measurementsCache.get(selectedSensor)?.temperatureLimits
+      )
+        return; // TIEDOT ON JO TALLENNETTU CACHEEN
+      const fetchedLimits = await getTemperatureLimits(selectedSensor);
+      const fetchedMeasurements: {
         sensorId: string;
         measurements: Measurement[];
       } = await getMeasurements(selectedSensor);
-      setCachedMeasurements((prevMap) => {
-        const newMap = new Map(prevMap);
-        const foundDays = new Set<string>();
-        newMeasurements.measurements.forEach((measurement) => {
-          // MUUNNETAAN UNIX-AIKALEIMA DD.MM.YYYY MUOTOON
-          const measurementDate = convertUnixTimestamp(measurement.timeStamp);
-          foundDays.add(measurementDate);
+      setMeasurementsCache((previouslyCachedMeasurements) => {
+        const map = new Map(previouslyCachedMeasurements);
+        const set = new Set<string>();
+        fetchedMeasurements.measurements.forEach((measurement) => {
+          set.add(convertUnixTimestamp(measurement.timeStamp));
         });
-        newMap.set(newMeasurements.sensorId, {
-          measurements: newMeasurements.measurements,
-          measurementDates: foundDays,
+        map.set(fetchedMeasurements.sensorId, {
+          measurements: fetchedMeasurements.measurements,
+          measuredDays: set,
+          temperatureLimits: fetchedLimits,
         });
-        return newMap;
+        return map;
       });
     };
-    fetchMeasurements();
+    fetch();
   }, [selectedSensor]);
-
-  // VALITUN PÄIVÄN USESTATE >> DEFAULT = KAIKKI PÄIVÄT
-  const [selectedDay, setSelectedDay] = useState("all");
-
+  // TARKISTETAAN CACHE, KUN VALITTU PÄIVÄ VAIHTUU (HAKEE TIETYN PÄIVÄN)
   useEffect(() => {
     const fetch = async () => {
       if (!selectedDay || !selectedSensor || selectedDay == "all") return;
-      if (
-        cachedMeasurements
-          .get(selectedSensor)
-          ?.measurementDates.has(selectedDay)
-      ) {
-        return;
-      } // HAETAAN SE!!
+      const alreadyInCache = measurementsCache
+        .get(selectedSensor)
+        ?.measuredDays.has(selectedDay);
+      if (alreadyInCache) return; // LÖYTYI CACHESTA
+
       const [day, month, year] = selectedDay.split(".");
-      console.log("pitäisi hakea lisää:", selectedDay);
       const startTime = Math.floor(
         new Date(
           Number(year),
@@ -135,46 +162,50 @@ export const LineChart = ({
           0,
         ).getTime() / 1000,
       );
-
       const endTime = startTime + 24 * 60 * 60;
-
-      const newMeasurements: Measurement[] = await getMeasurementsBySensor(
+      const fetchedMeasurements: Measurement[] = await getMeasurementsBySensor(
         selectedSensor,
         startTime,
         endTime,
       );
-      console.log("---", newMeasurements);
-      setCachedMeasurements((prevMap) => {
-        const newMap = new Map(prevMap);
-        newMap.get(selectedSensor)?.measurements.push(...newMeasurements);
-        newMap.get(selectedSensor)?.measurementDates.add(selectedDay);
-        return newMap;
+      setMeasurementsCache((previouslyCachedMeasurements) => {
+        const map = new Map(previouslyCachedMeasurements);
+        const alreadyInCache = map.get(selectedSensor);
+        if (alreadyInCache) {
+          map.set(selectedSensor, {
+            measurements: [
+              ...alreadyInCache.measurements,
+              ...fetchedMeasurements,
+            ],
+            measuredDays: new Set([
+              ...alreadyInCache.measuredDays,
+              selectedDay,
+            ]),
+            temperatureLimits: alreadyInCache.temperatureLimits,
+          });
+        }
+        return map;
       });
     };
     fetch();
-  }, [selectedDay, selectedSensor]);
+  }, [selectedDay]);
 
-  // MEASUREMENTS >> VALITUN SENSORIN KAIKKI MITTAUSTULOKSET
-  const measurements = cachedMeasurements.get(selectedSensor);
-  const filteredMeasurements =
-    measurements?.measurements.filter((measurement) => {
-      if (selectedDay == "all") return measurement; // PÄIVÄMÄÄRÄLLÄ EI MERKITYSTÄ
-      if (convertUnixTimestamp(measurement.timeStamp) != selectedDay) return; // PÄIVÄMÄÄRÄ EI VASTAA VALITTUA
-      return measurement;
-    }) || [];
-  // Y-AKSELIN RAJA-ARVOT
+  // SENSORIN VAIHTUESSA NÄYTETÄÄN KAIKKI PÄIVÄT JA SULJETAAN ASETUKSET-MODAALi
+  useEffect(() => {
+    setShowModal(false);
+    setSelectedDay("all");
+  }, [selectedSensor]);
+
+  // ___________________ KAAVION ASETUKSET JA DATA ____________________
+  // USE STATE Y-RAJA-ARVOILLE
   const [chartY, setChartY] = useState<{
-    min: undefined | string;
-    max: undefined | string;
+    min: number | undefined;
+    max: number | undefined;
   }>({
     min: undefined,
     max: undefined,
   });
-  // ASETUKSET - MODAALIN NÄKYVYYS
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-
-  // KAAVION ASETUKSET
-  const lineChartOptions = {
+  const chartOptions = {
     responsive: true,
     maintainAspectRatio: false,
     scales: {
@@ -192,33 +223,26 @@ export const LineChart = ({
       },
     },
   };
-
-  // DATA
-  const lineChartData = (field: "temperature" | "humidity") => {
-    const borderColor =
-      field === "temperature"
-        ? "oklch(76.9% 0.188 70.08)"
-        : "oklch(48.8% 0.243 264.376)";
-    const backgroundColor =
-      field === "temperature"
-        ? "oklch(76.9% 0.188 70.08)"
-        : "oklch(48.8% 0.243 264.376)";
-    const label = field === "temperature" ? "Lämpötila °C" : "Kosteus %";
+  const chartData = (field: "temperature" | "humidity") => {
     return {
-      labels: filteredMeasurements.map((measurement) => {
-        // YKSITTÄINEN MITTAUSTULOS
+      labels: filteredMeasurements?.map((measurement) => {
         return convertUnixTimestampWithHoursAndMinutes(measurement.timeStamp);
       }),
       datasets: [
         {
-          label: label,
-          data: filteredMeasurements.map((measurement) => {
-            // YKSITTÄINEN MITTAUSTULOS
-            return measurement[field]; // JOKO TEMPERATURE TAI HUMIDITY - RIIPPUEN KAAVIOSTA
+          backgroundColor:
+            field == "temperature"
+              ? "oklch(76.9% 0.188 70.08)"
+              : "oklch(48.8% 0.243 264.376)",
+          borderColor:
+            field == "temperature"
+              ? "oklch(76.9% 0.188 70.08)"
+              : "oklch(48.8% 0.243 264.376)",
+          label: field == "temperature" ? "Lämpötila °C" : "Kosteus %",
+          data: filteredMeasurements?.map((measurement) => {
+            return measurement[field];
           }),
-          borderColor: borderColor,
-          backgroundColor: backgroundColor,
-          tension: 0.5,
+          tension: 0.3,
           pointRadius: 0,
           pointHoverRadius: 6,
           pointHitRadius: 25,
@@ -226,55 +250,41 @@ export const LineChart = ({
       ],
     };
   };
-  // LÄMPÖTILAN RAJA-ARVOT
-  const [temperatureLimits, setTemperatureLimits] = useState({
-    minTemperature: "",
-    maxTemperature: "",
-  });
 
-  // PÄIVITETÄÄN RAJA-ARVOT UUSIKSI KUN VALITTU SENSORI MUUTTUU
-  useEffect(() => {
-    const fetchLimits = async () => {
-      if (!selectedSensor) return;
-      const response = await getTemperatureLimits(selectedSensor);
-      if (!response.success)
-        return setTemperatureLimits({
-          minTemperature: "",
-          maxTemperature: "",
-        });
-      setTemperatureLimits(response.limits);
-    };
-    fetchLimits();
-  }, [selectedSensor]);
   return (
     <div className="relative">
-      <div>
-        {isSettingsOpen && (
-          <Modal
-            temperatureLimits={temperatureLimits}
-            updateYLimits={(field: "min" | "max", value: string) => {
-              if (value.length === 0) {
-                return setChartY((prevLimits) => ({
-                  ...prevLimits,
-                  [field]: undefined,
-                }));
+      {showModal && (
+        <Modal
+          updateTemperatureLimits={async (limits: LimitType) => {
+            await saveTemperatureLimits(selectedSensor, limits);
+            setMeasurementsCache((previouslyCachedMeasurements) => {
+              const map = new Map(previouslyCachedMeasurements);
+              const alreadyInCache = map.get(selectedSensor);
+              if (alreadyInCache) {
+                map.set(selectedSensor, {
+                  ...alreadyInCache,
+                  temperatureLimits: limits,
+                });
               }
-              setChartY((prevLimits) => ({
-                ...prevLimits,
-                [field]: Number(value),
-              }));
-            }}
-            chartY={chartY}
-            selectedSensor={selectedSensor as string}
-            onClose={() => setIsSettingsOpen(false)}
-          />
-        )}
-      </div>
+              return map;
+            });
+          }}
+          temperatureLimits={temperatureLimits || {}}
+          onClose={() => setShowModal(false)}
+          chartY={chartY}
+          changeChartY={(field: "min" | "max", value: string) => {
+            setChartY((previousValues) => ({
+              ...previousValues,
+              [field]: !value ? undefined : Number(value),
+            }));
+          }}
+        />
+      )}
       <div className="flex justify-between">
-        <h1 className="text-amber-500 text-lg uppercase">Mittaustiedot</h1>
+        <h1 className="text-amber-500 text-lg">Mittaustulokset</h1>
         <button
-          onClick={() => setIsSettingsOpen(true)}
-          className="cursor-pointer hover:text-amber-500 transition-colors focus:text-amber-500 outline-none"
+          onClick={() => setShowModal(true)}
+          className="cursor-pointer transition-colors hover:text-amber-500"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -292,59 +302,54 @@ export const LineChart = ({
           </svg>
         </button>
       </div>
-      <div>
+      <div className="flex flex-col">
         <label
           htmlFor="selectSensor"
-          className="block text-zinc-500 uppercase text-xs tracking-widest translate-x-1 translate-y-2 bg-white w-fit"
+          className="text-zinc-500 text-xs uppercase tracking-wide translate-y-2 translate-x-2 bg-white w-fit"
         >
-          Valitse näytettävä sensori
+          Valitse sensori
         </label>
         <select
           value={selectedSensor}
-          onChange={(e) => {
-            setSelectedDay("all");
-            setSelectedSensor(e.target.value);
-          }}
+          onChange={(e) => setSelectedSensor(e.target.value)}
           name="selectSensor"
-          className="p-2 w-full border border-zinc-300 rounded-md rounded-tl-none shadow-xs hover:border-amber-500 focus:border-amber-500 outline-none"
+          className="p-2 border border-zinc-200 rounded-md cursor-pointer hover:border-amber-500 focus:border-amber-500 outline-none"
         >
           {sensors &&
             [...sensors.values()].map((sensor) => (
               <option key={sensor.sensorId} value={sensor.sensorId}>
-                {sensor.sensorName} - ({sensor.sensorId})
+                {sensor.sensorName} - {sensor.sensorId}
               </option>
             ))}
         </select>
       </div>
-      <div>
+      <div className="flex flex-col">
         <label
           htmlFor="selectDay"
-          className="block text-zinc-500 uppercase text-xs tracking-widest translate-x-1 translate-y-2 bg-white w-fit"
+          className="text-zinc-500 text-xs uppercase tracking-wide translate-y-2 translate-x-2 bg-white w-fit"
         >
-          Valitse näytettävä päivä
+          Valitse päivä
         </label>
         <select
           value={selectedDay}
           onChange={(e) => setSelectedDay(e.target.value)}
-          name="selectDay"
-          className="p-2 w-full border border-zinc-300 rounded-md rounded-tl-none shadow-xs hover:border-amber-500 focus:border-amber-500 outline-none"
+          name="selectSensor"
+          className="p-2 border border-zinc-200 rounded-md cursor-pointer hover:border-amber-500 focus:border-amber-500 outline-none"
         >
           <option value="all">Kaikki päivät</option>
-          {sensorsMap &&
-            sensorsMap
-              .get(selectedSensor as string)
-              ?.measurementDates.map((date) => (
-                <option key={date} value={date}>
-                  {date}
-                </option>
-              ))}
+          {sensors &&
+            sensors.get(selectedSensor)?.measuredDays.map((day) => (
+              <option key={day} value={day}>
+                {day}
+              </option>
+            ))}
         </select>
       </div>
-      <div className=" h-100 w-full">
-        <Line options={lineChartOptions} data={lineChartData("temperature")} />
+      <div className="h-100 w-full">
+        <Line options={chartOptions} data={chartData("temperature")}></Line>
       </div>
-      <div className=" h-100 w-full">
-        <Line options={lineChartOptions} data={lineChartData("humidity")} />
+      <div className="h-100 w-full">
+        <Line options={chartOptions} data={chartData("humidity")}></Line>
       </div>
     </div>
   );
