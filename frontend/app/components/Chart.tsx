@@ -137,13 +137,16 @@ export const LineChart = ({
       );
 
       const endTime = startTime + 24 * 60 * 60;
-      const newMeasurements: { [key: number]: Measurement } =
-        await getMeasurementsBySensor(selectedSensor, startTime, endTime);
+
+      const newMeasurements: Measurement[] = await getMeasurementsBySensor(
+        selectedSensor,
+        startTime,
+        endTime,
+      );
+      console.log("---", newMeasurements);
       setCachedMeasurements((prevMap) => {
         const newMap = new Map(prevMap);
-        newMap
-          .get(selectedSensor)
-          ?.measurements.push(...Object.values(newMeasurements));
+        newMap.get(selectedSensor)?.measurements.push(...newMeasurements);
         newMap.get(selectedSensor)?.measurementDates.add(selectedDay);
         return newMap;
       });

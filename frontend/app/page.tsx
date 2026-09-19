@@ -1,4 +1,5 @@
 import { LineChart } from "./components/Chart";
+import { Chart2 } from "./components/Chart2";
 import { getMeasurements, getSensors } from "./lib/Api";
 import { Measurement } from "./types/measurement";
 import { Sensor } from "./types/sensor";
@@ -14,6 +15,7 @@ export default async function Home() {
     <div className="flex flex-col  w-full ">
       <div className="border border-zinc-200 m-2 rounded-xl shadow-sm p-2">
         <LineChart sensors={sensors} data={measurements} />
+        <Chart2 sensorsData={sensors} data={measurements} />
       </div>
     </div>
   );
