@@ -62,26 +62,20 @@ custom:
   DYNAMODB_TABLE_NAME_TEMPERATURE: ${env:DYNAMODB_LIMITS_TABLE_NAME}
 
 functions:
-  getLimitsBySensor:
-    handler: temperature.getLimitsBySensor
+  getSensorTemperatureLimits:
+    handler: temperature.getSensorTemperatureLimits
     events:
       - httpApi:
           path: /sensor/{sensorId}
           method: get
-  createSensorLimits:
-    handler: temperature.createSensorLimits
+  saveTemperatureLimits:
+    handler: temperature.saveTemperatureLimits
     events:
       - httpApi:
           path: /sensor
           method: post
-  updateSensorLimits:
-    handler: temperature.updateSensorLimits
-    events:
-      - httpApi:
-          path: /sensor/{sensorId}
-          method: put
-  getMeasurementsBySensorId:
-    handler: measurement.getMeasurementsBySensorId
+  getMeasurementsFromDay:
+    handler: measurement.getMeasurementsFromDay
     events:
       - httpApi:
           path: /measurements/{sensorId}
@@ -92,14 +86,14 @@ functions:
       - httpApi:
           path: /measurement
           method: post
-  getAllMeasurements:
-    handler: measurement.getAllMeasurements
+  getMeasurements:
+    handler: measurement.getMeasurements
     events:
       - httpApi:
           path: /measurements
           method: get
-  getAllSensors:
-    handler: sensors.getAllSensors
+  getSensors:
+    handler: sensors.getSensors
     events:
       - httpApi:
           path: /sensors
@@ -112,6 +106,10 @@ functions:
 # TemperatureLimitsTable
 # sensorId = Partition key, "10:00:3A:BB:AS:1C" - MAC - osoite
 
+# SensorsTable
+# sensorId = Parition key
+# sensorName = string - NIMI
+# measurementDates = SS (STRING SET) - LISTA MITATUISTA PÄIVÄMÄÄRISTÄ DD.MM.YYY
 resources:
   Resources:
     MeasurementsTable:

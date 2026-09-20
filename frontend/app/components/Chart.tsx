@@ -25,6 +25,7 @@ import {
 } from "chart.js";
 import { Modal } from "./Modal";
 import { LimitType } from "../types/limit";
+import annotationPlugin from "chartjs-plugin-annotation";
 Chart.register(
   CategoryScale,
   LinearScale,
@@ -32,6 +33,7 @@ Chart.register(
   LineElement,
   Legend,
   Tooltip,
+  annotationPlugin,
 );
 export const Chart2 = ({
   sensorsData,
@@ -109,10 +111,15 @@ export const Chart2 = ({
     .sort((a, b) => Number(a.timeStamp) - Number(b.timeStamp));
   const temperatureLimits =
     measurementsCache.get(selectedSensor)?.temperatureLimits;
+
+  // USE STATE RAJA-ARVOJEN PIIRTÄMISELLE
+  const [showLimitLines, setShowLimitLines] = useState(false);
+
   // __________TARVITTAVAT MUUTTUJAT ESITELTY____________
 
   // TARKISTETAAN CACHE, KUN VALITTU SENSORI VAIHTUU (VIIMEISET 7 PÄIVÄÄ HAKEE)
   useEffect(() => {
+    setShowLimitLines(false);
     const fetch = async () => {
       if (!selectedDay || !selectedSensor) return; // EI OLE MILLÄ HAKEA
       if (measurementsCache.get(selectedSensor)?.temperatureLimits) return; // RAJA-ARVOT ON JO TALLENNETTU
@@ -122,7 +129,7 @@ export const Chart2 = ({
       )
         return; // TIEDOT ON JO TALLENNETTU CACHEEN
       const fetchedLimits = await getSensorTemperatureLimits(selectedSensor);
-
+      if (fetchedLimits?.maxTemperature) setShowLimitLines(true);
       const fetchedMeasurements: {
         sensorId: string;
         measurements: Measurement[];
@@ -221,6 +228,19 @@ export const Chart2 = ({
     responsive: true,
     maintainAspectRatio: false,
     scales: {
+      x: {
+        ticks: {
+          maxTicksLimit: 5,
+          font: {
+            size: 10,
+          },
+        },
+      },
+    },
+  };
+  const temperatureChartOptions = {
+    ...chartOptions,
+    scales: {
       y: {
         min: chartY.min,
         max: chartY.max,
@@ -232,6 +252,39 @@ export const Chart2 = ({
             size: 10,
           },
         },
+      },
+    },
+    plugins: {
+      annotation: {
+        annotations:
+          showLimitLines &&
+          measurementsCache.get(selectedSensor)?.temperatureLimits
+            ?.maxTemperature
+            ? {
+                min: {
+                  type: "line" as const,
+                  yMin:
+                    measurementsCache.get(selectedSensor)?.temperatureLimits
+                      ?.minTemperature || undefined,
+                  yMax:
+                    measurementsCache.get(selectedSensor)?.temperatureLimits
+                      ?.minTemperature || undefined,
+                  borderWidth: 1,
+                  borderColor: "oklch(35.9% 0.144 278.697)",
+                },
+                max: {
+                  type: "line" as const,
+                  yMin:
+                    measurementsCache.get(selectedSensor)?.temperatureLimits
+                      ?.maxTemperature || undefined,
+                  yMax:
+                    measurementsCache.get(selectedSensor)?.temperatureLimits
+                      ?.maxTemperature || undefined,
+                  borderWidth: 1,
+                  borderColor: "oklch(71.2% 0.194 13.428)",
+                },
+              }
+            : {},
       },
     },
   };
@@ -267,6 +320,8 @@ export const Chart2 = ({
     <div className="relative">
       {showModal && (
         <Modal
+          limitLinesStatus={showLimitLines}
+          showLimitLines={(value: boolean) => setShowLimitLines(value)}
           editTemperatureLimits={async (limits: LimitType) => {
             console.log(limits);
             await saveTemperatureLimits(selectedSensor, {
@@ -362,7 +417,10 @@ export const Chart2 = ({
         </select>
       </div>
       <div className="h-100 w-full">
-        <Line options={chartOptions} data={chartData("temperature")}></Line>
+        <Line
+          options={temperatureChartOptions}
+          data={chartData("temperature")}
+        ></Line>
       </div>
       <div className="h-100 w-full">
         <Line options={chartOptions} data={chartData("humidity")}></Line>

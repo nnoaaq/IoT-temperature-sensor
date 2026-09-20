@@ -7,7 +7,7 @@ const dynamodb = documentClient;
 const tableName = process.env.DYNAMODB_SENSORS_TABLE_NAME;
 
 // /sensors GET
-export const getAllSensors = async (
+export const getSensors = async (
   event: APIGatewayProxyEventV2,
 ): Promise<APIGatewayProxyResultV2> => {
   try {

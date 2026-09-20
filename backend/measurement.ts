@@ -33,7 +33,7 @@ export const convertUnixTimestamp = (timestamp: number) => {
 };
 
 // measurements/{sensorId} GET
-export const getMeasurementsBySensorId = async (
+export const getMeasurementsFromDay = async (
   event: APIGatewayProxyEventV2,
 ): Promise<APIGatewayProxyResultV2> => {
   try {
@@ -157,7 +157,7 @@ export const createMeasurement = async (
 };
 
 // /measurements GET
-export const getAllMeasurements = async (
+export const getMeasurements = async (
   event: APIGatewayProxyEventV2,
 ): Promise<APIGatewayProxyResultV2> => {
   try {

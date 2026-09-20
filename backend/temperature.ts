@@ -7,7 +7,7 @@ const dynamodb = documentClient;
 const tableName = process.env.DYNAMODB_TABLE_NAME_LIMITS;
 const privateKey = process.env.PRIVATE_KEY;
 // /sensor/{sensorId} GET
-export const getLimitsBySensor = async (
+export const getSensorTemperatureLimits = async (
   event: APIGatewayProxyEventV2,
 ): Promise<APIGatewayProxyResultV2> => {
   try {
@@ -39,7 +39,7 @@ export const getLimitsBySensor = async (
 };
 
 // /sensor POST
-export const createSensorLimits = async (
+export const saveTemperatureLimits = async (
   event: APIGatewayProxyEventV2,
 ): Promise<APIGatewayProxyResultV2> => {
   // VAADITAAN OMA TOKENI

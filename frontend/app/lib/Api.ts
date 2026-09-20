@@ -4,7 +4,7 @@ const PRIVATE_KEY = process.env.PRIVATE_KEY;
 const API_URL = process.env.API_URL;
 
 // _____ /measurements _____
-// GET (getAllMeasurements - BACKEND)
+// GET (getMeasurements - BACKEND)
 export const getMeasurements = async (sensorId: string | null) => {
   // ?sensorId = sensorId:string | null
   // null > ensimmäinen haku sivulle tultaessa (sensori-taulusta ensimmäinen id backendin toimesta)
@@ -23,7 +23,7 @@ export const getMeasurements = async (sensorId: string | null) => {
 };
 
 // _____ /measurement/sensorId _____
-// GET (getMeasurementsBySensorId - BACKEND)
+// GET (getMeasurementsFromDay - BACKEND)
 export const getMeasurementsFromDay = async (
   sensorId: string,
   startTime: number,
@@ -46,7 +46,7 @@ export const getMeasurementsFromDay = async (
 };
 
 // _____ /sensor _____
-// POST (createSensorLimits - BACKEND)
+// POST (saveTemperatureLimits - BACKEND)
 export const saveTemperatureLimits = async (
   sensorId: string,
   limits: { maxTemperature: string; minTemperature: string },
@@ -71,7 +71,7 @@ export const saveTemperatureLimits = async (
 };
 
 // _____ /sensor/sensorId _____
-// GET (getLimitsBySensor - BACKEND)
+// GET (getSensorTemperatureLimits - BACKEND)
 export const getSensorTemperatureLimits = async (sensorId: string) => {
   if (!API_URL || !sensorId) return null;
   try {
@@ -84,7 +84,7 @@ export const getSensorTemperatureLimits = async (sensorId: string) => {
 };
 
 // _____ /sensors _____
-// GET (getAllSensors - BACKEND)
+// GET (getSensors - BACKEND)
 export const getSensors = async () => {
   if (!API_URL) return null;
   try {

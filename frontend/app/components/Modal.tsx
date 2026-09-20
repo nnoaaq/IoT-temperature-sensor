@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { LimitType } from "../types/limit";
 
 export const Modal = ({
@@ -8,16 +8,22 @@ export const Modal = ({
   changeChartY,
   temperatureLimits,
   editTemperatureLimits,
+  showLimitLines,
+  limitLinesStatus,
 }: {
+  limitLinesStatus: boolean;
+  showLimitLines: (condition: boolean) => void;
   onClose: () => void;
   chartY: { min: number | undefined; max: number | undefined };
   changeChartY: (field: "min" | "max", value: string) => void;
   temperatureLimits: LimitType;
   editTemperatureLimits: (limits: LimitType) => void;
 }) => {
+  console.log(limitLinesStatus);
+  const [limitLines, setLimitLines] = useState(limitLinesStatus);
   const [tempLimits, setTempLimits] = useState({
-    maxTemperature: temperatureLimits.maxTemperature ?? "",
-    minTemperature: temperatureLimits.minTemperature ?? "",
+    maxTemperature: temperatureLimits.maxTemperature ?? undefined,
+    minTemperature: temperatureLimits.minTemperature ?? undefined,
   });
   return (
     <div className="absolute right-0 z-50 bg-zinc-50 w-full max-w-md  modal-open">
@@ -106,7 +112,7 @@ export const Modal = ({
                 viewBox="0 0 24 24"
                 strokeWidth={1.5}
                 stroke="currentColor"
-                className="size-6"
+                className="size-8"
               >
                 <path
                   strokeLinecap="round"
@@ -121,6 +127,19 @@ export const Modal = ({
           <h3 className="text-zinc-700 uppercase text-xs mt-2 ">
             Muokkaa kaavion raja-arvoja
           </h3>
+          <div className="flex justify-between border-b border-zinc-200  pl-0 p-1 gap-2">
+            <p className="text-zinc-500 text-xs">Näytä raja-arvot kaaviossa</p>
+            <input
+              checked={limitLines}
+              onChange={(e) => {
+                setLimitLines(e.target.checked);
+                showLimitLines(e.target.checked);
+              }}
+              type="checkbox"
+              name=""
+              id=""
+            />
+          </div>
           <div className="flex gap-2">
             <div className="flex flex-col">
               <label
@@ -131,8 +150,9 @@ export const Modal = ({
               </label>
               <input
                 onChange={(e) => changeChartY("min", e.target.value)}
-                placeholder={!chartY.min ? "-" : String(chartY.min)}
-                type="number"
+                value={!chartY.min ? undefined : String(chartY.min)}
+                placeholder="-"
+                type="string"
                 name="minY"
                 className="p-2 border border-zinc-200 rounded-md rounded-tl-none hover:border-amber-500 focus:border-amber-500 outline-none w-full placeholder:text-center placeholder:italic"
               />
@@ -146,8 +166,9 @@ export const Modal = ({
               </label>
               <input
                 onChange={(e) => changeChartY("max", e.target.value)}
-                placeholder={!chartY.max ? "-" : String(chartY.max)}
-                type="number"
+                value={!chartY.max ? undefined : String(chartY.max)}
+                placeholder="-"
+                type="string"
                 name="maxY"
                 className="p-2 border border-zinc-200 rounded-md rounded-tl-none hover:border-amber-500 focus:border-amber-500 outline-none w-full placeholder:text-center placeholder:italic"
               />
