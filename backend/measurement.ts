@@ -16,7 +16,9 @@ const tableName = process.env.DYNAMODB_TABLE_NAME;
 const sensorsTableName = process.env.DYNAMODB_SENSORS_TABLE_NAME;
 const limitsTableName = process.env.DYNAMODB_TABLE_NAME_LIMITS;
 const authorization_key = process.env.PRIVATE_KEY;
-
+const headers = {
+  "content-type": "application/json",
+};
 export const convertUnixTimestamp = (timestamp: number) => {
   // palauttaa ajan dd.mm.yyyy muodossa
   try {
@@ -65,6 +67,7 @@ export const getMeasurementsFromDay = async (
     );
     return {
       statusCode: 200,
+      headers,
       body: JSON.stringify(output.Items),
     };
   } catch (error) {
@@ -91,6 +94,7 @@ export const createMeasurement = async (
   )
     return {
       statusCode: 401,
+      headers,
       body: JSON.stringify({
         message: "Et ole tervetullut.",
       }),
@@ -146,6 +150,7 @@ export const createMeasurement = async (
     }
     return {
       statusCode: 200,
+      headers,
       body: JSON.stringify({
         message: "Mittaustulos tallennettu onnistuneesti.",
       }),
@@ -178,6 +183,7 @@ export const getMeasurements = async (
       if (!output.Items)
         return {
           statusCode: 400,
+          headers,
           body: JSON.stringify({ message: "Sensoreita ei löytynyt." }),
         };
       sensorId = output.Items[0]?.sensorId;

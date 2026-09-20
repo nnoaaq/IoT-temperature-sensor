@@ -19,7 +19,6 @@ export const Modal = ({
   temperatureLimits: LimitType;
   editTemperatureLimits: (limits: LimitType) => void;
 }) => {
-  console.log(limitLinesStatus);
   const [limitLines, setLimitLines] = useState(limitLinesStatus);
   const [tempLimits, setTempLimits] = useState({
     maxTemperature: temperatureLimits.maxTemperature ?? undefined,

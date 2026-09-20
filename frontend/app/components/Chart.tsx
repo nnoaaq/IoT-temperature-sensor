@@ -323,7 +323,6 @@ export const Chart2 = ({
           limitLinesStatus={showLimitLines}
           showLimitLines={(value: boolean) => setShowLimitLines(value)}
           editTemperatureLimits={async (limits: LimitType) => {
-            console.log(limits);
             await saveTemperatureLimits(selectedSensor, {
               maxTemperature: limits.maxTemperature as string,
               minTemperature: limits.minTemperature as string,

@@ -3,6 +3,10 @@ import { CustomError, handleError } from "./error";
 import { documentClient } from "./database";
 import { GetCommand, PutCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
 
+const headers = {
+  "content-type": "application/json",
+};
+
 const dynamodb = documentClient;
 const tableName = process.env.DYNAMODB_TABLE_NAME_LIMITS;
 const privateKey = process.env.PRIVATE_KEY;
@@ -31,6 +35,7 @@ export const getSensorTemperatureLimits = async (
       throw new CustomError(404, { message: "Raja-arvoja ei tallennettu." });
     return {
       statusCode: 200,
+      headers,
       body: JSON.stringify(output.Item),
     };
   } catch (error) {
@@ -46,6 +51,7 @@ export const saveTemperatureLimits = async (
   if (event.headers?.authorization !== privateKey)
     return {
       statusCode: 401,
+      headers,
       body: JSON.stringify({
         message: "Et ole tervetullut.",
       }),
@@ -56,16 +62,23 @@ export const saveTemperatureLimits = async (
     // jos arvot tallennettu > over-ride
     // sensorId:string
     // maxTemperature:number, minTemperature:number
-    const { sensorId, ...fields } = JSON.parse(event.body as string);
+    const { sensorId, maxTemperature, minTemperature } = JSON.parse(
+      event.body as string,
+    );
     if (!sensorId)
       throw new CustomError(404, { message: "Tarkista sensorin tunniste." });
+    if (!maxTemperature || !minTemperature)
+      throw new CustomError(404, {
+        message: "Tarkista raja-arvot.",
+      });
 
     await dynamodb.send(
       new PutCommand({
         TableName: tableName,
         Item: {
           sensorId: sensorId,
-          ...fields,
+          maxTemperature: maxTemperature,
+          minTemperature: minTemperature,
         },
         ReturnValues: "ALL_OLD",
       }),
@@ -90,6 +103,7 @@ export const updateSensorLimits = async (
   if (event.headers?.authorization !== privateKey)
     return {
       statusCode: 401,
+      headers,
       body: JSON.stringify({
         message: "Et ole tervetullut.",
       }),
@@ -118,6 +132,7 @@ export const updateSensorLimits = async (
     );
     return {
       statusCode: 200,
+      headers,
       body: JSON.stringify((await output).Attributes),
     };
   } catch (error) {

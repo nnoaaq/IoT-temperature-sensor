@@ -6,6 +6,10 @@ import { ScanCommand } from "@aws-sdk/lib-dynamodb";
 const dynamodb = documentClient;
 const tableName = process.env.DYNAMODB_SENSORS_TABLE_NAME;
 
+const headers = {
+  "Content-Type": "application/json",
+};
+
 // /sensors GET
 export const getSensors = async (
   event: APIGatewayProxyEventV2,
@@ -30,6 +34,7 @@ export const getSensors = async (
 
     return {
       statusCode: 200,
+      headers,
       body: JSON.stringify(formatted),
     };
   } catch (error) {
