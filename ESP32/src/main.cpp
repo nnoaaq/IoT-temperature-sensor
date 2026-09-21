@@ -18,22 +18,17 @@ const char *CUSTOM_SENSOR_NAME = "Makuuhuone";              // Sensorin nimi (n�
 
 void saveMeasurements(TempAndHumidity measurements)
 {
-  // Alustetaan HTTP
-  HTTPClient HTTP;
+  HTTPClient HTTP; // Alustetaan HTTP
   HTTP.begin(String(SERVER_URL) + "/measurement");
   HTTP.addHeader("Content-Type", "application/json");
   HTTP.addHeader("authorization", PRIVATE_KEY);
-  // Kellonaika
-  time_t unixTime;
+  time_t unixTime; // Kellonaika
   time(&unixTime);
-
-  // HTTP - post pyynnön body
   String body = "{\"temperature\":" + String(measurements.temperature, 1) +
                 ",\"humidity\":" + String(measurements.humidity, 1) +
                 ",\"sensorId\":\"" + String(WiFi.macAddress()) + "\"" +
                 ",\"sensorName\":\"" + String(CUSTOM_SENSOR_NAME) + "\"" +
-                ",\"timeStamp\":" + String(unixTime) + "}";
-  Serial.println(body);
+                ",\"timeStamp\":" + String(unixTime) + "}"; // HTTP - post pyynnön body
   int statusCode = HTTP.POST(body);
   if (statusCode > 0)
   {
@@ -83,16 +78,11 @@ void setup()
     delay(500);
   }
 
-  // Otetaan DHT - anturi käyttöön
-  DHT.setup(SENSOR_PIN, DHTesp::DHT11);
+  DHT.setup(SENSOR_PIN, DHTesp::DHT11); // Otetaan DHT - anturi käyttöön
   delay(500);
-
-  // Luetaan lämpötila ja kosteus
-  TempAndHumidity measurement = DHT.getTempAndHumidity();
+  TempAndHumidity measurement = DHT.getTempAndHumidity(); // Luetaan lämpötila ja kosteus
   saveMeasurements(measurement);
-
-  // Deep Sleep
-  esp_sleep_enable_timer_wakeup(15 * 60 * 1000000); // 15 minuuttia
+  esp_sleep_enable_timer_wakeup(15 * 60 * 1000000); // Deep Sleep 15 minuuttia
   esp_deep_sleep_start();
 }
 

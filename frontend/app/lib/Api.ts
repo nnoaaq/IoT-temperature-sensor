@@ -88,7 +88,9 @@ export const getSensorTemperatureLimits = async (sensorId: string) => {
 export const getSensors = async () => {
   if (!API_URL) return null;
   try {
-    const foundSensors = await fetch(`${API_URL}/sensors`);
+    const foundSensors = await fetch(`${API_URL}/sensors`, {
+      cache: "no-cache",
+    });
     if (!foundSensors.ok) return null;
     return await foundSensors.json();
   } catch (error) {
