@@ -55,7 +55,7 @@ export const Chart2 = ({
         measuredDays: string[];
       }
     >();
-    sensorsData.forEach((sensor) => {
+    sensorsData?.forEach((sensor) => {
       map.set(sensor.sensorId, {
         sensorId: sensor.sensorId,
         sensorName: sensor.sensorName,

@@ -14,6 +14,9 @@ export const getMeasurements = async (sensorId: string | null) => {
     const searchQueryParameters = sensorId ? `?sensorId=${sensorId}` : "";
     const foundMeasurements = await fetch(
       `${API_URL}/measurements${searchQueryParameters}`,
+      {
+        cache: "no-cache",
+      },
     );
     if (!foundMeasurements.ok) return null;
     return await foundMeasurements.json();
