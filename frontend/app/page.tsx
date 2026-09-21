@@ -7,7 +7,7 @@ export default async function Home() {
   const measurements: {
     sensorId: string;
     measurements: Measurement[];
-  } = await getMeasurements(null); // ENSIMMÄINEN HAKU
+  } = await getMeasurements("ssa"); // ENSIMMÄINEN HAKU
   const sensors: Sensor[] = await getSensors();
   return (
     <div className="flex flex-col  w-full ">
