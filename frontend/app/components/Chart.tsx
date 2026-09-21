@@ -77,8 +77,12 @@ export const Chart2 = ({
     >
   >(() => {
     const map = new Map();
-    if (!data) return map;
-    if (data.measurements?.length === 0) return map; // EI TULLUTKAAN DATAA - TYHJÄ MAP
+    if (
+      !data ||
+      !Array.isArray(data.measurements) ||
+      data.measurements.length === 0
+    )
+      return map; // EI TULLUTKAAN DATAA - TYHJÄ MAP
     const set = new Set();
     data.measurements.forEach((measurement) => {
       set.add(convertUnixTimestamp(measurement.timeStamp));
